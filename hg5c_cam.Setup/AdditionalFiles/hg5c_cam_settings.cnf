@@ -1,0 +1,201 @@
+﻿cameras:
+  - slot: 1
+    streams:
+      - stream: 1
+        cameraName: "Adószoba"
+        url: "rtsp://kkcnet.ddns.net:21974/Streaming/Channels/101?transportmode=unicast&profile=Profile_1"
+        username: "hg5cop"
+        password: "Hg5c-Ha5kkc"
+        useOnvif: true
+        onvifDeviceServiceUrl: "http://kkcnet.ddns.net:21954/onvif/device_service"
+        onvifProfileToken: "Profile_1"
+        onvifXSize: 1920
+        onvifYSize: 1080
+        autoResolveRtspFromOnvif: false
+        reconnectDelaySec: 3
+        connectionRetries: 25
+        networkTimeoutSec: 5
+        maxFps: 0
+        showFpsOverlay: true
+        fpsOverlayPosition: "Bottom left"
+        soundEnabled: true
+        aspectRatioMode: "Auto"
+        windowLeft: 1566
+        windowTop: 703
+        windowWidth: 966
+        windowHeight: 608
+        windowMaximized: true
+      - stream: 2
+        cameraName: "Adószoba"
+        url: "rtsp://kkcnet.ddns.net:21974/Streaming/Channels/102?transportmode=unicast&profile=Profile_2"
+        username: "hg5cop"
+        password: "Hg5c-Ha5kkc"
+        useOnvif: true
+        onvifDeviceServiceUrl: "http://kkcnet.ddns.net:21954/onvif/device_service"
+        onvifProfileToken: "Profile_2"
+        onvifXSize: 704
+        onvifYSize: 576
+        autoResolveRtspFromOnvif: false
+        reconnectDelaySec: 3
+        connectionRetries: 25
+        networkTimeoutSec: 5
+        maxFps: 0
+        showFpsOverlay: true
+        fpsOverlayPosition: "Bottom left"
+        soundEnabled: true
+        aspectRatioMode: "16:9"
+        windowLeft: 1679
+        windowTop: 770
+        windowWidth: 869
+        windowHeight: 548
+        windowMaximized: false
+  - slot: 2
+    streams:
+      - stream: 1
+        cameraName: "UltraBeam tornya"
+        url: "rtsp://kkcnet.ddns.net:21970/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
+        username: "hg5cop"
+        password: "Hg5c-Ha5kkc"
+        useOnvif: true
+        onvifDeviceServiceUrl: "http://kkcnet.ddns.net:21950/onvif/device_service"
+        onvifProfileToken: "MediaProfile00000"
+        onvifXSize: 1920
+        onvifYSize: 1080
+        autoResolveRtspFromOnvif: false
+        reconnectDelaySec: 3
+        connectionRetries: 25
+        networkTimeoutSec: 5
+        maxFps: 0
+        showFpsOverlay: true
+        fpsOverlayPosition: "Top left"
+        soundEnabled: false
+        aspectRatioMode: "Auto"
+        windowLeft: 1468
+        windowTop: 648
+        windowWidth: 1066
+        windowHeight: 664
+        windowMaximized: true
+      - stream: 2
+        cameraName: "UltraBeam tornya"
+        url: "rtsp://kkcnet.ddns.net:21970/cam/realmonitor?channel=1&subtype=1&unicast=true&proto=Onvif"
+        username: "hg5cop"
+        password: "Hg5c-Ha5kkc"
+        useOnvif: true
+        onvifDeviceServiceUrl: "http://kkcnet.ddns.net:21950/onvif/device_service"
+        onvifProfileToken: "MediaProfile00001"
+        onvifXSize: 704
+        onvifYSize: 576
+        autoResolveRtspFromOnvif: false
+        reconnectDelaySec: 3
+        connectionRetries: 25
+        networkTimeoutSec: 5
+        maxFps: 0
+        showFpsOverlay: true
+        fpsOverlayPosition: "Top left"
+        soundEnabled: false
+        aspectRatioMode: "16:9"
+        windowLeft: 1679
+        windowTop: 770
+        windowWidth: 869
+        windowHeight: 548
+        windowMaximized: false
+  - slot: 3
+    streams:
+      - stream: 1
+        cameraName: "URH torony"
+        url: "rtsp://kkcnet.ddns.net:21972/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
+        username: "hg5cop"
+        password: "Hg5c-Ha5kkc"
+        useOnvif: true
+        onvifDeviceServiceUrl: "http://kkcnet.ddns.net:21952/onvif/device_service"
+        onvifProfileToken: "MediaProfile00000"
+        onvifXSize: 1920
+        onvifYSize: 1080
+        autoResolveRtspFromOnvif: false
+        reconnectDelaySec: 3
+        connectionRetries: 25
+        networkTimeoutSec: 5
+        maxFps: 0
+        showFpsOverlay: true
+        fpsOverlayPosition: "Top left"
+        soundEnabled: false
+        aspectRatioMode: "Auto"
+        windowLeft: 828
+        windowTop: 244
+        windowWidth: 810
+        windowHeight: 520
+        windowMaximized: true
+      - stream: 2
+        cameraName: "URH torony"
+        url: "rtsp://kkcnet.ddns.net:21972/cam/realmonitor?channel=1&subtype=1&unicast=true&proto=Onvif"
+        username: "hg5cop"
+        password: "Hg5c-Ha5kkc"
+        useOnvif: true
+        onvifDeviceServiceUrl: "http://kkcnet.ddns.net:21952/onvif/device_service"
+        onvifProfileToken: "MediaProfile00001"
+        onvifXSize: 704
+        onvifYSize: 576
+        autoResolveRtspFromOnvif: false
+        reconnectDelaySec: 3
+        connectionRetries: 25
+        networkTimeoutSec: 5
+        maxFps: 0
+        showFpsOverlay: true
+        fpsOverlayPosition: "Top left"
+        soundEnabled: false
+        aspectRatioMode: "16:9"
+        windowLeft: 1676
+        windowTop: 771
+        windowWidth: 870
+        windowHeight: 548
+        windowMaximized: false
+  - slot: 4
+    streams:
+      - stream: 1
+        cameraName: "Nappali"
+        url: "rtsp://kkcnet.ddns.net:21973/11"
+        username: "hg5cop"
+        password: "Hg5c-Ha5kkc"
+        useOnvif: true
+        onvifDeviceServiceUrl: "http://kkcnet.ddns.net:21953/onvif/device_service"
+        onvifProfileToken: "MainStreamProfileToken"
+        onvifXSize: 1920
+        onvifYSize: 1080
+        autoResolveRtspFromOnvif: false
+        reconnectDelaySec: 3
+        connectionRetries: 25
+        networkTimeoutSec: 5
+        maxFps: 0
+        showFpsOverlay: true
+        fpsOverlayPosition: "Bottom left"
+        soundEnabled: true
+        aspectRatioMode: "Auto"
+        windowLeft: 826
+        windowTop: 771
+        windowWidth: 810
+        windowHeight: 520
+        windowMaximized: true
+      - stream: 2
+        cameraName: "Nappali"
+        url: "rtsp://kkcnet.ddns.net:21973/12"
+        username: "hg5cop"
+        password: "Hg5c-Ha5kkc"
+        useOnvif: true
+        onvifDeviceServiceUrl: "http://kkcnet.ddns.net:21953/onvif/device_service"
+        onvifProfileToken: "SecondStreamProfileToken"
+        onvifXSize: 640
+        onvifYSize: 352
+        autoResolveRtspFromOnvif: false
+        reconnectDelaySec: 3
+        connectionRetries: 25
+        networkTimeoutSec: 5
+        maxFps: 0
+        showFpsOverlay: true
+        fpsOverlayPosition: "Bottom left"
+        soundEnabled: true
+        aspectRatioMode: "Auto"
+        windowLeft: 1676
+        windowTop: 771
+        windowWidth: 870
+        windowHeight: 548
+        windowMaximized: false

@@ -1,0 +1,14 @@
+<WixLocalization xmlns="http://wixtoolset.org/schemas/v4/wxl" Culture="en-us">
+  <String Id="LicenseRtfPath" Value="UiAssets\AboutLicense.rtf" />
+  <String Id="ArpComments" Value="RTSP camera viewer by HA3FLT" />
+  <String Id="DowngradeErrorMessage" Value="A newer version is already installed." />
+  <String Id="ExitLaunchCheckboxText" Value="Launch hg5c_cam after setup" />
+  <String Id="LaunchArguments" Value="1 en" />
+  <String Id="PasswordDlgWindowTitle" Value="[ProductName] Setup" />
+  <String Id="PasswordDlgTitle" Value="Enter the password for the included camera configuration or leave the field empty to skip this step." />
+  <String Id="PasswordDlgDescription" Value="Please enter password to unpack hg5c_cam_settings.cnf. This step is optional" />
+  <String Id="PasswordDlgPasswordLabel" Value="Password:" />
+  <String Id="PasswordDlgClearSettingsCheckbox" Value="Delete existing hg5c_cam camera settings!" />
+  <String Id="CustomInstallDirStartMenuCheckbox" Value="Create Start Menu shortcut" />
+  <String Id="CustomInstallDirDesktopCheckbox" Value="Create Desktop shortcut" />
+</WixLocalization>

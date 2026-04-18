@@ -1,0 +1,41 @@
+<Project Sdk="WixToolset.Sdk/4.0.5" ToolsVersion="4.0">
+  <PropertyGroup>
+    <OutputType>Package</OutputType>
+    <Platforms>x64</Platforms>
+    <Platform>x64</Platform>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <Configurations>Debug;Release</Configurations>
+    <Cultures>en-us;hu-hu</Cultures>
+    <ProjectGuid>{4238dd41-0087-40d2-a7ad-7668de44a9be}</ProjectGuid>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="4.0.5" />
+    <Compile Include="Product.wxs" />
+    <EmbeddedResource Include="Localization\en-us.wxl" />
+    <EmbeddedResource Include="Localization\hu-hu.wxl" />
+    <Content Include="AdditionalFiles\7z.dll" />
+    <Content Include="AdditionalFiles\7z.exe" />
+    <Content Include="AdditionalFiles\hg5c_cam_settings.7z" />
+    <Content Include="UiAssets\AboutLicense.rtf" />
+    <Content Include="UiAssets\AboutLicense_hu.rtf" />
+    <Content Include="UiAssets\bannrbmp.bmp" />
+    <Content Include="UiAssets\dlgbmp.bmp" />
+    <Content Include="UiAssets\exclamic.ico" />
+    <Content Include="UiAssets\info.ico" />
+    <Content Include="UiAssets\new.ico" />
+    <Content Include="UiAssets\up.ico" />
+  </ItemGroup>
+
+  <Target Name="CollectLocalizedMsiOutputs" AfterTargets="Build">
+    <Copy SourceFiles="$(OutputPath)en-us\hg5c_cam.Setup.msi"
+          DestinationFiles="$(OutputPath)hg5c_cam.Setup.msi"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(OutputPath)en-us\hg5c_cam.Setup.msi')" />
+
+    <Copy SourceFiles="$(OutputPath)hu-hu\hg5c_cam.Setup.msi"
+          DestinationFiles="$(OutputPath)hg5c_cam.Telepítő.msi"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(OutputPath)hu-hu\hg5c_cam.Setup.msi')" />
+  </Target>
+</Project>

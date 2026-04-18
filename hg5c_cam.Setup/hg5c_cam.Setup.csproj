@@ -1,0 +1,19 @@
+<Project Sdk="WixToolset.Sdk/4.0.5">
+  <PropertyGroup>
+    <OutputType>Package</OutputType>
+    <Platform>x64</Platform>
+    <Configurations>Debug;Release</Configurations>
+    <Hg5cCamTargetFramework>net8.0-windows</Hg5cCamTargetFramework>
+    <Hg5cCamRuntimeIdentifier>win-x64</Hg5cCamRuntimeIdentifier>
+    <Hg5cCamOutputDirWithPlatform>$(MSBuildThisFileDirectory)..\hg5c_cam\bin\$(Platform)\$(Configuration)\$(Hg5cCamTargetFramework)\$(Hg5cCamRuntimeIdentifier)</Hg5cCamOutputDirWithPlatform>
+    <Hg5cCamOutputDirWithoutPlatform>$(MSBuildThisFileDirectory)..\hg5c_cam\bin\$(Configuration)\$(Hg5cCamTargetFramework)\$(Hg5cCamRuntimeIdentifier)</Hg5cCamOutputDirWithoutPlatform>
+    <Hg5cCamOutputDir Condition="Exists('$(Hg5cCamOutputDirWithPlatform)')">$(Hg5cCamOutputDirWithPlatform)</Hg5cCamOutputDir>
+    <Hg5cCamOutputDir Condition="'$(Hg5cCamOutputDir)' == ''">$(Hg5cCamOutputDirWithoutPlatform)</Hg5cCamOutputDir>
+    <DefineConstants>Hg5cCamOutputDir=$(Hg5cCamOutputDir)</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\hg5c_cam\hg5c_cam.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,14 @@
+<WixLocalization xmlns="http://wixtoolset.org/schemas/v4/wxl" Culture="hu-hu">
+  <String Id="LicenseRtfPath" Value="UiAssets\AboutLicense_hu.rtf" />
+  <String Id="ArpComments" Value="RTSP kamerakép-megjelenítő HA3FLT-től" />
+  <String Id="DowngradeErrorMessage" Value="Egy újabb verzió már telepítve van." />
+  <String Id="ExitLaunchCheckboxText" Value="A hg5c_cam indítása a telepítés után" />
+  <String Id="LaunchArguments" Value="1 hu" />
+  <String Id="PasswordDlgWindowTitle" Value="[ProductName] telepítő" />
+  <String Id="PasswordDlgTitle" Value="Kamera-konfiguráció jelszava" />
+  <String Id="PasswordDlgDescription" Value="Írja be a mellékelt kamera-konfiguráció jelszavát, vagy hagyja üresen a mezőt, ha ki szeretné hagyni ezt a lépést." />
+  <String Id="PasswordDlgPasswordLabel" Value="Jelszó:" />
+  <String Id="PasswordDlgClearSettingsCheckbox" Value="Töröld a hg5c_cam előző kamera-beállításait!" />
+  <String Id="CustomInstallDirStartMenuCheckbox" Value="Start menü-parancsikon létrehozása" />
+  <String Id="CustomInstallDirDesktopCheckbox" Value="Asztali parancsikon létrehozása" />
+</WixLocalization>

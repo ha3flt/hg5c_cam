@@ -1,0 +1,247 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <?define Hg5cCamOutputDir="..\hg5c_cam\bin\x64\Release\net8.0-windows\win-x64"?>
+  <?define ProductVersion="1.2.86"?>
+  <Package Name="hg5c_cam v$(var.ProductVersion)"
+           Manufacturer="HA3FLT"
+           Version="$(var.ProductVersion)"
+           UpgradeCode="F2D5DA43-73A7-4435-85B3-E8D6700D22CD"
+           Language="1033"
+           Codepage="1250"
+           Scope="perMachine">
+    <MajorUpgrade DowngradeErrorMessage="!(loc.DowngradeErrorMessage)" />
+    <MediaTemplate EmbedCab="yes" />
+    <Property Id="ARPCOMMENTS" Value="!(loc.ArpComments)" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/" />
+    <Property Id="INSTALL_PASSWORD" Hidden="yes" />
+    <Property Id="CLEAR_SETTINGS" Value="1" />
+
+    <WixVariable Id="WixUILicenseRtf" Value="!(loc.LicenseRtfPath)" />
+    <WixVariable Id="WixUIBannerBmp" Value="UiAssets\bannrbmp.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="UiAssets\dlgbmp.bmp" />
+    <WixVariable Id="WixUIExclamationIco" Value="UiAssets\exclamic.ico" />
+    <WixVariable Id="WixUIInfoIco" Value="UiAssets\info.ico" />
+    <WixVariable Id="WixUINewIco" Value="UiAssets\new.ico" />
+    <WixVariable Id="WixUIUpIco" Value="UiAssets\up.ico" />
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="!(loc.ExitLaunchCheckboxText)" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <Property Id="STARTMENU_SHORTCUT" Value="1" />
+    <Property Id="DESKTOP_SHORTCUT" Value="1" />
+
+    <ui:WixUI Id="WixUI_InstallDir" />
+
+    <CustomAction Id="LaunchApplication"
+                  FileRef="Hg5cCamExe"
+                  ExeCommand="!(loc.LaunchArguments)"
+                  Return="asyncNoWait"
+                  Impersonate="yes" />
+    <CustomAction Id="LaunchApplicationWithImportedSettings"
+                  FileRef="Hg5cCamExe"
+                  ExeCommand="!(loc.LaunchArguments) --clearsettings --importsettings"
+                  Return="asyncNoWait"
+                  Impersonate="yes" />
+    <CustomAction Id="LaunchApplicationWithClearSettings"
+                  FileRef="Hg5cCamExe"
+                  ExeCommand="!(loc.LaunchArguments) --clearsettings"
+                  Return="asyncNoWait"
+                  Impersonate="yes" />
+    <CustomAction Id="LaunchApplicationWithImportedSettingsOnly"
+                  FileRef="Hg5cCamExe"
+                  ExeCommand="!(loc.LaunchArguments) --importsettings"
+                  Return="asyncNoWait"
+                  Impersonate="yes" />
+    <CustomAction Id="SetExtractData"
+                  Property="ExtractSettingsFile"
+                  Value="x -p&quot;[INSTALL_PASSWORD]&quot; -aoa &quot;[INSTALLFOLDER]hg5c_cam_settings.7z&quot; &quot;hg5c_cam_settings.cnf&quot; -o&quot;[INSTALLFOLDER]&quot; -y" />
+    <CustomAction Id="ExtractSettingsFile"
+                  FileRef="SevenZipExe"
+                  ExeCommand="[ExtractSettingsFile]"
+                  Return="ignore"
+                  Impersonate="no"
+                  Execute="deferred" />
+    <InstallExecuteSequence>
+      <Custom Action="SetExtractData" Before="ExtractSettingsFile" Condition="NOT Installed AND INSTALL_PASSWORD" />
+      <Custom Action="ExtractSettingsFile" After="InstallFiles" Condition="NOT Installed AND INSTALL_PASSWORD" />
+    </InstallExecuteSequence>
+    <UI>
+      <Dialog Id="PasswordDlg" Width="370" Height="270" Title="!(loc.PasswordDlgWindowTitle)">
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="340" Height="30" Transparent="yes" NoPrefix="yes" Text="!(loc.PasswordDlgTitle)" />
+        <Control Id="Description" Type="Text" X="20" Y="55" Width="330" Height="30" Text="!(loc.PasswordDlgDescription)" />
+        <Control Id="PasswordLabel" Type="Text" X="20" Y="95" Width="110" Height="15" Text="!(loc.PasswordDlgPasswordLabel)" />
+        <Control Id="PasswordEdit" Type="Edit" X="135" Y="92" Width="200" Height="18" Property="INSTALL_PASSWORD" Password="yes" />
+        <Control Id="ClearSettingsCheckbox"
+                 Type="CheckBox"
+                 X="20"
+                 Y="122"
+                 Width="330"
+                 Height="34"
+                 Property="CLEAR_SETTINGS"
+                 CheckBoxValue="1"
+                 Text="!(loc.PasswordDlgClearSettingsCheckbox)" />
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)">
+          <Publish Event="NewDialog" Value="CustomInstallDirDlg" Condition="1" />
+        </Control>
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)">
+          <Publish Event="NewDialog" Value="VerifyReadyDlg" Condition="1" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="!(loc.WixUICancel)">
+          <Publish Event="SpawnDialog" Value="CancelDlg" Condition="1" />
+        </Control>
+      </Dialog>
+
+      <Dialog Id="CustomInstallDirDlg" Width="370" Height="270" Title="!(loc.InstallDirDlg_Title)">
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="!(loc.InstallDirDlgBannerBitmap)" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes" Text="!(loc.InstallDirDlgTitle)" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="!(loc.InstallDirDlgDescription)" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Id="FolderLabel" Type="Text" X="20" Y="60" Width="290" Height="30" Text="!(loc.InstallDirDlgFolderLabel)" />
+        <Control Id="Folder" Type="PathEdit" X="20" Y="100" Width="320" Height="18" Property="WIXUI_INSTALLDIR" Indirect="yes" />
+        <Control Id="ChangeFolder" Type="PushButton" X="20" Y="120" Width="56" Height="17" Text="!(loc.InstallDirDlgChange)">
+          <Publish Property="_BrowseProperty" Value="[WIXUI_INSTALLDIR]" Order="1" Condition="1" />
+          <Publish Event="SpawnDialog" Value="BrowseDlg" Order="2" Condition="1" />
+        </Control>
+
+        <Control Id="StartMenuShortcutCheckbox"
+                 Type="CheckBox"
+                 X="20"
+                 Y="188"
+                 Width="300"
+                 Height="17"
+                 Property="STARTMENU_SHORTCUT"
+                 CheckBoxValue="1"
+                 Text="!(loc.CustomInstallDirStartMenuCheckbox)" />
+
+        <Control Id="DesktopShortcutCheckbox"
+                 Type="CheckBox"
+                 X="20"
+                 Y="206"
+                 Width="300"
+                 Height="17"
+                 Property="DESKTOP_SHORTCUT"
+                 CheckBoxValue="1"
+                 Text="!(loc.CustomInstallDirDesktopCheckbox)" />
+
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)">
+          <Publish Event="NewDialog" Value="LicenseAgreementDlg" Condition="1" />
+        </Control>
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)">
+          <Publish Event="SetTargetPath" Value="[WIXUI_INSTALLDIR]" Order="1" Condition="1" />
+          <Publish Event="DoAction" Value="WixUIValidatePath_X64" Order="2" Condition="NOT WIXUI_DONTVALIDATEPATH" />
+          <Publish Event="SpawnDialog" Value="InvalidDirDlg" Order="3" Condition="NOT WIXUI_DONTVALIDATEPATH AND WIXUI_INSTALLDIR_VALID &lt;&gt; &quot;1&quot;" />
+          <Publish Event="NewDialog" Value="PasswordDlg" Order="4" Condition="WIXUI_DONTVALIDATEPATH OR WIXUI_INSTALLDIR_VALID = &quot;1&quot;" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="!(loc.WixUICancel)">
+          <Publish Event="SpawnDialog" Value="CancelDlg" Condition="1" />
+        </Control>
+      </Dialog>
+
+      <Publish Dialog="ExitDialog"
+              Control="Finish"
+              Event="DoAction"
+              Value="LaunchApplication"
+              Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT INSTALL_PASSWORD AND CLEAR_SETTINGS &lt;&gt; &quot;1&quot;" />
+
+      <Publish Dialog="ExitDialog"
+              Control="Finish"
+              Event="DoAction"
+              Value="LaunchApplicationWithClearSettings"
+              Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT INSTALL_PASSWORD AND CLEAR_SETTINGS = &quot;1&quot;" />
+
+      <Publish Dialog="ExitDialog"
+              Control="Finish"
+              Event="DoAction"
+              Value="LaunchApplicationWithImportedSettingsOnly"
+              Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND INSTALL_PASSWORD AND CLEAR_SETTINGS &lt;&gt; &quot;1&quot;" />
+
+      <Publish Dialog="ExitDialog"
+              Control="Finish"
+              Event="DoAction"
+              Value="LaunchApplicationWithImportedSettings"
+              Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND INSTALL_PASSWORD AND CLEAR_SETTINGS = &quot;1&quot;" />
+
+      <Publish Dialog="LicenseAgreementDlg"
+              Control="Next"
+              Event="NewDialog"
+              Value="CustomInstallDirDlg"
+              Condition="LicenseAccepted = &quot;1&quot;"
+              Order="1000" />
+
+      <Publish Dialog="VerifyReadyDlg"
+              Control="Back"
+              Event="NewDialog"
+              Value="PasswordDlg"
+              Condition="1"
+              Order="1000" />
+    </UI>
+
+    <Feature Id="MainFeature" Title="hg5c_cam" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="hg5c_cam">
+        <Directory Id="FFMPEGDIR" Name="ffmpeg" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="hg5c_cam" />
+    </StandardDirectory>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="ProductComponents">
+      <Component Id="MainFilesComponent" Directory="INSTALLFOLDER" Guid="1CC2A9EB-4B66-4D4B-8C38-2D23C27E8F31" Bitness="always64">
+        <File Id="Hg5cCamExe" Source="$(var.Hg5cCamOutputDir)\hg5c_cam.exe" />
+        <File Id="SevenZipExe" Source="AdditionalFiles\7z.exe" />
+        <File Source="AdditionalFiles\7z.dll" />
+        <File Id="SettingsArchive" Source="AdditionalFiles\hg5c_cam_settings.7z" />
+        <File Source="$(var.Hg5cCamOutputDir)\hg5c_cam.dll" />
+        <File Source="$(var.Hg5cCamOutputDir)\hg5c_cam.deps.json" />
+        <File Source="$(var.Hg5cCamOutputDir)\hg5c_cam.runtimeconfig.json" />
+        <File Source="$(var.Hg5cCamOutputDir)\FFmpeg.AutoGen.dll" />
+        <File Source="$(var.Hg5cCamOutputDir)\NAudio.dll" />
+        <File Source="$(var.Hg5cCamOutputDir)\NAudio.Asio.dll" />
+        <File Source="$(var.Hg5cCamOutputDir)\NAudio.Core.dll" />
+        <File Source="$(var.Hg5cCamOutputDir)\NAudio.Midi.dll" />
+        <File Source="$(var.Hg5cCamOutputDir)\NAudio.Wasapi.dll" />
+        <File Source="$(var.Hg5cCamOutputDir)\NAudio.WinForms.dll" />
+        <File Source="$(var.Hg5cCamOutputDir)\NAudio.WinMM.dll" />
+        <File Source="$(var.Hg5cCamOutputDir)\SharpDX.dll" />
+        <File Source="$(var.Hg5cCamOutputDir)\SharpDX.Direct3D9.dll" />
+        <RemoveFile Id="RemoveGeneratedSettingsCnf" Name="hg5c_cam_settings.cnf" On="uninstall" />
+      </Component>
+
+      <Component Id="FfmpegFilesComponent" Directory="FFMPEGDIR" Guid="7D0B3D62-2D57-4AA0-BDA5-0E1F2BC76F2C" Bitness="always64">
+        <File Source="$(var.Hg5cCamOutputDir)\ffmpeg\avcodec-60.dll" />
+        <File Source="$(var.Hg5cCamOutputDir)\ffmpeg\avdevice-60.dll" />
+        <File Source="$(var.Hg5cCamOutputDir)\ffmpeg\avfilter-9.dll" />
+        <File Source="$(var.Hg5cCamOutputDir)\ffmpeg\avformat-60.dll" />
+        <File Source="$(var.Hg5cCamOutputDir)\ffmpeg\avutil-58.dll" />
+        <File Source="$(var.Hg5cCamOutputDir)\ffmpeg\postproc-57.dll" />
+        <File Source="$(var.Hg5cCamOutputDir)\ffmpeg\swresample-4.dll" />
+        <File Source="$(var.Hg5cCamOutputDir)\ffmpeg\swscale-7.dll" />
+      </Component>
+
+      <Component Id="StartMenuShortcutComponent" Directory="ApplicationProgramsFolder" Guid="39A1BF2C-7F97-49EF-9C46-7743A8D9B2DF" Condition="STARTMENU_SHORTCUT = 1">
+        <Shortcut Id="StartMenuShortcut"
+                  Name="hg5c_cam"
+                  Target="[INSTALLFOLDER]hg5c_cam.exe"
+                  WorkingDirectory="INSTALLFOLDER" />
+        <RemoveFolder Id="RemoveApplicationProgramsFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\HA3FLT\hg5c_cam" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+
+      <Component Id="DesktopShortcutComponent" Directory="DesktopFolder" Guid="8BB8957E-3495-49E6-8401-91D5C8DA1D2D" Condition="DESKTOP_SHORTCUT = 1">
+        <Shortcut Id="DesktopShortcut"
+                  Name="hg5c_cam"
+                  Target="[INSTALLFOLDER]hg5c_cam.exe"
+                  WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKCU" Key="Software\HA3FLT\hg5c_cam" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

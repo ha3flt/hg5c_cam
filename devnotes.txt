@@ -1,0 +1,34 @@
+***
+Config file generation:
+7z a -pmypassword hg5c_cam_settings.7z hg5c_cam_settings.cnf
+
+Installation with log:
+msiexec /i hg5c_cam.Telepítő.msi /l*v install.log
+
+*****
+- Repair install won't replace and fix the config file
+
+- add global sound on/off menu and switch. Put in on the right of the toolbar.
+
+- Version: 1.1.build (increasing number, max. 5 digits?)
+
+- Cache the settings when a camera is set up in the Camera settings
+
+- What's the per-stream windowMaximized for?
+
+-----
+- Do the controls scale poorly at other resolutions? The bottom of the Settings window covers the
+  controls, but when? Is it DPI-aware? Need to ask.
+- The stream overlaps the bottom border of the main window slightly, but only at very low resolutions
+
+- Even after a Hungarian installation, it apparently starts up in English on a Hungarian Windows
+  system — why?
+
+- Sometimes the username/password is included in the RTSP URL, sometimes it isn't (only with the
+  operational room camera, or is there another reason?)
+
+-----
+- The frames per second dropped to 8-10 instead of 25?? - Only after a while; could it be a virtual
+  machine issue? Or the ffpmeg parameters?
+
+*****

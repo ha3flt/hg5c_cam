@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>Assets\hg5c_cam.ico</ApplicationIcon>
+    <Version>1.2.86</Version>
+    <AssemblyVersion>1.2.86.1</AssemblyVersion>
+    <FileVersion>1.2.86.1</FileVersion>
+    <InformationalVersion>1.2.86</InformationalVersion>
+    <Company>HA3FLT</Company>
+    <Authors>HA3FLT</Authors>
+    <Product>hg5c_cam</Product>
+    <Copyright>2026 (c) Copyright by HA3FLT</Copyright>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <AssemblyName>hg5c_cam</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="FFmpeg.AutoGen" Version="6.*" />
+    <PackageReference Include="SharpDX" Version="4.2.0" />
+    <PackageReference Include="SharpDX.Direct3D9" Version="4.2.0" />
+    <PackageReference Include="NAudio" Version="2.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\docs\REQUIREMENTS.md">
+      <Link>Documents\REQUIREMENTS.md</Link>
+    </None>
+    <None Include="..\docs\ARCHITECTURE.md">
+      <Link>Documents\ARCHITECTURE.md</Link>
+    </None>
+    <None Include="..\docs\IMPLEMENTATION_NOTES.md">
+      <Link>Documents\IMPLEMENTATION_NOTES.md</Link>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="ffmpeg_bins\av*.dll;ffmpeg_bins\sw*.dll;ffmpeg_bins\postproc-*.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>ffmpeg\%(Filename)%(Extension)</TargetPath>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+</Project>
