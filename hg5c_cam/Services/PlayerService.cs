@@ -104,6 +104,7 @@ public class PlayerService
                 try
                 {
                     await Task.Run(() => DecodeRtspLoop(rtspUrl, maxFps, networkTimeoutSec, soundEnabled, audioOutputDeviceName, soundLevel, generation, token), token).ConfigureAwait(false);
+                    attempt = 0;
                 }
                 catch (OperationCanceledException)
                 {

@@ -63,25 +63,30 @@
                         <TextBlock Text="HD" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </ToggleButton>
                     <ToggleButton Tag="Sound" Width="28" Height="28" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="SoundToolbarButton_OnClick">
-                        <TextBlock Text="🔊" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="🔊" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </ToggleButton>
                     <ToggleButton Tag="Fps" Width="28" Height="28" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="FpsToolbarButton_OnClick">
                         <TextBlock Text="i" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </ToggleButton>
-                    <Separator Margin="6,0,4,0"/>
-                    <ToggleButton Content="1" Tag="SplitCount:1" Width="28" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="SplitPlaybackToolbarButton_OnClick"/>
-                    <ToggleButton Content="4" Tag="SplitCount:4" Width="28" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="SplitPlaybackToolbarButton_OnClick"/>
-                    <Button Content="-" Tag="SplitCount:Down" Width="28" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="SplitPlaybackToolbarStepDown_OnClick"/>
-                    <Button Content="+" Tag="SplitCount:Up" Width="28" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="SplitPlaybackToolbarStepUp_OnClick"/>
                     <Separator Margin="6,0,4,0"/>
 
                     <ToggleButton Content="1" Tag="ActiveSlot:1" Width="28" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="ActiveVisibleCameraToolbarButton_OnClick"/>
                     <ToggleButton Content="2" Tag="ActiveSlot:2" Width="28" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="ActiveVisibleCameraToolbarButton_OnClick"/>
                     <ToggleButton Content="3" Tag="ActiveSlot:3" Width="28" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="ActiveVisibleCameraToolbarButton_OnClick"/>
                     <ToggleButton Content="4" Tag="ActiveSlot:4" Width="28" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="ActiveVisibleCameraToolbarButton_OnClick"/>
-                    <Button Content="-" Tag="ActiveSlot:Down" Width="28" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="ActiveVisibleCameraToolbarStepDown_OnClick"/>
-                    <Button Content="+" Tag="ActiveSlot:Up" Width="28" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="ActiveVisibleCameraToolbarStepUp_OnClick"/>
+                    <Button Content="-" Tag="ActiveSlot:Down" Width="21" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="ActiveVisibleCameraToolbarStepDown_OnClick"/>
+                    <Button Content="+" Tag="ActiveSlot:Up" Width="21" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="ActiveVisibleCameraToolbarStepUp_OnClick"/>
                     <Separator Margin="6,0,4,0"/>
+
+                    <ToggleButton Content="1" Tag="SplitCount:1" Width="28" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="SplitPlaybackToolbarButton_OnClick"/>
+                    <ToggleButton Content="4" Tag="SplitCount:4" Width="28" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="SplitPlaybackToolbarButton_OnClick"/>
+                    <Button Content="-" Tag="SplitCount:Down" Width="21" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="SplitPlaybackToolbarStepDown_OnClick"/>
+                    <Button Content="+" Tag="SplitCount:Up" Width="21" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="SplitPlaybackToolbarStepUp_OnClick"/>
+                    <Separator Margin="6,0,4,0"/>
+
+                    <ToggleButton Tag="GlobalSound" Width="28" Height="28" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="GlobalSoundToolbarButton_OnClick">
+                        <TextBlock Text="🔊" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </ToggleButton>
                     <ToggleButton Tag="Topmost" Width="28" Height="28" Margin="2,1" ToolTipService.Placement="Top" ToolTipService.HorizontalOffset="0" ToolTipService.VerticalOffset="-4" Click="TopmostToolbarButton_OnClick">
                         <TextBlock Text="📌" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </ToggleButton>
@@ -168,8 +173,6 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -180,17 +183,17 @@
                         </Grid.ColumnDefinitions>
 
                         <Button Grid.Row="0" Grid.Column="2" Style="{StaticResource NavigationButtonStyle}" Tag="UpFast" Content="↑↑" Width="32" Height="26" Margin="2,2,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
-                        <Button Grid.Row="2" Grid.Column="0" Style="{StaticResource NavigationButtonStyle}" Tag="LeftFast" Content="←←" Width="32" Height="26" Margin="2,2,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
-                        <Button Grid.Row="2" Grid.Column="1" Style="{StaticResource NavigationButtonStyle}" Tag="Left" Content="←" Width="32" Height="26" Margin="2,2,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
+                        <Button Grid.Row="2" Grid.Column="0" Style="{StaticResource NavigationButtonStyle}" Tag="LeftFast" Content="←←" Width="32" Height="26" Margin="2,-24,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
+                        <Button Grid.Row="2" Grid.Column="1" Style="{StaticResource NavigationButtonStyle}" Tag="Left" Content="←" Width="32" Height="26" Margin="2,-24,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
                         <Button Grid.Row="1" Grid.Column="2" Style="{StaticResource NavigationButtonStyle}" Tag="Up" Content="↑" Width="32" Height="26" Margin="2,2,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
-                        <Button Grid.Row="2" Grid.Column="3" Style="{StaticResource NavigationButtonStyle}" Tag="Right" Content="→" Width="32" Height="26" Margin="2,2,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
-                        <Button Grid.Row="2" Grid.Column="4" Style="{StaticResource NavigationButtonStyle}" Tag="RightFast" Content="→→" Width="32" Height="26" Margin="2,2,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
-                        <Button Grid.Row="3" Grid.Column="2" Style="{StaticResource NavigationButtonStyle}" Tag="Down" Content="↓" Width="32" Height="26" Margin="2,2,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
-                        <Button Grid.Row="5" Grid.Column="0" Style="{StaticResource NavigationButtonStyle}" Tag="ZoomOutFast" Content="--" Width="32" Height="26" Margin="2,2,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
-                        <Button Grid.Row="5" Grid.Column="1" Style="{StaticResource NavigationButtonStyle}" Tag="ZoomOut" Content="-" Width="32" Height="26" Margin="2,2,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
-                        <Button Grid.Row="4" Grid.Column="2" Style="{StaticResource NavigationButtonStyle}" Tag="DownFast" Content="↓↓" Width="32" Height="26" Margin="2,2,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
-                        <Button Grid.Row="5" Grid.Column="3" Style="{StaticResource NavigationButtonStyle}" Tag="ZoomIn" Content="+" Width="32" Height="26" Margin="2,2,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
-                        <Button Grid.Row="5" Grid.Column="4" Style="{StaticResource NavigationButtonStyle}" Tag="ZoomInFast" Content="++" Width="32" Height="26" Margin="2,2,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
+                        <Button Grid.Row="2" Grid.Column="3" Style="{StaticResource NavigationButtonStyle}" Tag="Right" Content="→" Width="32" Height="26" Margin="2,-24,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
+                        <Button Grid.Row="2" Grid.Column="4" Style="{StaticResource NavigationButtonStyle}" Tag="RightFast" Content="→→" Width="32" Height="26" Margin="2,-24,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
+                        <Button Grid.Row="2" Grid.Column="2" Style="{StaticResource NavigationButtonStyle}" Tag="Down" Content="↓" Width="32" Height="26" Margin="2,2,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
+                        <Button Grid.Row="3" Grid.Column="0" Style="{StaticResource NavigationButtonStyle}" Tag="ZoomOutFast" Content="--" Width="32" Height="26" Margin="2,24,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
+                        <Button Grid.Row="3" Grid.Column="1" Style="{StaticResource NavigationButtonStyle}" Tag="ZoomOut" Content="-" Width="32" Height="26" Margin="2,24,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
+                        <Button Grid.Row="3" Grid.Column="2" Style="{StaticResource NavigationButtonStyle}" Tag="DownFast" Content="↓↓" Width="32" Height="26" Margin="2,-22,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
+                        <Button Grid.Row="3" Grid.Column="3" Style="{StaticResource NavigationButtonStyle}" Tag="ZoomIn" Content="+" Width="32" Height="26" Margin="2,24,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
+                        <Button Grid.Row="3" Grid.Column="4" Style="{StaticResource NavigationButtonStyle}" Tag="ZoomInFast" Content="++" Width="32" Height="26" Margin="2,24,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
                     </Grid>
                 </Grid>
             </Border>

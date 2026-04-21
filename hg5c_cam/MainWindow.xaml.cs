@@ -210,6 +210,7 @@ public partial class MainWindow : Window
         SetToolbarToggleState("StartStop", this.StartStreamMenuItem.IsChecked);
         SetToolbarToggleState("Quality", this.HighQualityMenuItem.IsChecked);
         SetToolbarToggleState("Sound", this.StreamSoundMenuItem.IsChecked);
+        SetToolbarToggleState("GlobalSound", this._globalSettings.EnableSound);
         SetToolbarToggleState("Topmost", this.TopmostMenuItem.IsChecked);
         SetToolbarToggleState("Fps", this.FpsOverlayMenuItem.IsChecked);
         UpdateStartStopToolbarContent();
@@ -645,6 +646,23 @@ public partial class MainWindow : Window
         this.TopmostMenuItem.IsChecked = button.IsChecked == true;
         TopmostMenuItem_OnClick(this.TopmostMenuItem, e);
         UpdateViewToolbarSelection();
+    }
+
+    private void GlobalSoundToolbarButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not ToggleButton button)
+        {
+            return;
+        }
+
+        this._globalSettings.EnableSound = button.IsChecked == true;
+        this._registryService.SaveGlobalSettings(this._globalSettings);
+        UpdateViewToolbarSelection();
+
+        if (this._playerService.State is PlayerState.Playing or PlayerState.Connecting)
+        {
+            StartPlayback();
+        }
     }
 
     private void FpsToolbarButton_OnClick(object sender, RoutedEventArgs e)
@@ -1208,6 +1226,7 @@ public partial class MainWindow : Window
         SetToolbarButtonToolTip("StartStop", "ToolbarStartStop");
         SetToolbarButtonToolTip("Quality", "ToolbarQuality");
         SetToolbarButtonToolTip("Sound", "ToolbarSound");
+        SetToolbarButtonToolTip("GlobalSound", "ToolbarGlobalSound");
         SetToolbarButtonToolTip("Topmost", "ToolbarTopmost");
         SetToolbarButtonToolTip("Fps", "ToolbarFps");
         SetToolbarButtonToolTip("SplitCount:1", "ToolbarSplitCameraCount");
