@@ -1,7 +1,7 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
      xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <?define Hg5cCamOutputDir="..\hg5c_cam\bin\x64\Release\net8.0-windows\win-x64"?>
-  <?define ProductVersion="1.2.87"?>
+  <?define ProductVersion="1.2.88"?>
   <Package Name="hg5c_cam v$(var.ProductVersion)"
            Manufacturer="HA3FLT"
            Version="$(var.ProductVersion)"

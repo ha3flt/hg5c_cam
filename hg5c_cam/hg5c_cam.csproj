@@ -4,10 +4,10 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Assets\hg5c_cam.ico</ApplicationIcon>
-    <Version>1.2.87</Version>
-    <AssemblyVersion>1.2.87.1</AssemblyVersion>
-    <FileVersion>1.2.87.1</FileVersion>
-    <InformationalVersion>1.2.87</InformationalVersion>
+    <Version>1.2.88</Version>
+    <AssemblyVersion>1.2.88.1</AssemblyVersion>
+    <FileVersion>1.2.88.1</FileVersion>
+    <InformationalVersion>1.2.88</InformationalVersion>
     <Company>HA3FLT</Company>
     <Authors>HA3FLT</Authors>
     <Product>hg5c_cam</Product>
