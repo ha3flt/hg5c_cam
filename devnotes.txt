@@ -8,18 +8,10 @@ msiexec /i hg5c_cam.Telepítő.msi /l*v install.log
 - Version: 1.2.build (increasing number, max. 5 digits?)
 
 *****
-- If the active camera is not a sound-enabled one, the audio playback doesn't start at first;
-    it only starts after switching modes back and forth many times. Are the playback sounds mixed
-    and audible, or is only the sound from the selected camera audible?
-- Sometimes shortcuts won't work when I change the active camera by clicking on them!
-((- Use the third stream on the Dahua cams. Try Automatic aspect ratio.))
+- How the per-stream windowMaximized works exactly?
 
-- Add global sound on/off menu and switch. Put in on the right of the toolbar.
-- Repair install won't replace and fix the config file
+- Is the per-instance volume setting ok, or is it not enough comfortable?
 
-- What's the per-stream windowMaximized for?
-
------
 - Do the controls scale poorly at other resolutions? The bottom of the Settings window covers the
     controls, but when? Is it DPI-aware? Need to ask.
 - The stream overlaps the bottom border of the main window slightly, but only at very low

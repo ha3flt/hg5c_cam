@@ -42,6 +42,8 @@
                 <ComboBox x:Name="AspectRatioComboBox" Margin="0,4,0,0"/>
                 <CheckBox x:Name="WindowMaximizedCheckBox" Content="Maximized" Margin="0,8,0,0"/>
                 <CheckBox x:Name="SoundCheckBox" Content="Stream sound" Margin="0,4,0,0"/>
+                <TextBlock x:Name="SoundLevelLabel" Text="Sound level" Margin="0,6,0,0"/>
+                <Slider x:Name="SoundLevelSlider" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"/>
                 <Separator Margin="0,12,0,8"/>
                 <TextBlock x:Name="MaxFpsLabel" Text="Max. displayed FPS (0 = unlimited)"/>
                 <TextBox x:Name="MaxFpsTextBox" Margin="0,4,0,0"/>

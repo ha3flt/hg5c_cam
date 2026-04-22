@@ -206,6 +206,7 @@ public class RegistryService
         settings.ShowFpsOverlay = ToInt(key.GetValue("ShowFpsOverlay"), 0) == 1;
         settings.FpsOverlayPosition = (key.GetValue("FpsOverlayPosition") as string) ?? AppSettings.FpsOverlayPositionBottomLeft;
         settings.SoundEnabled = ToInt(key.GetValue("SoundEnabled"), 0) == 1;
+        settings.SoundLevel = Math.Clamp(ToInt(key.GetValue("SoundLevel"), settings.SoundLevel), 0, 100);
         settings.AspectRatioMode = (key.GetValue("AspectRatioMode") as string) ?? AppSettings.AutoAspectRatio;
         settings.OnvifXSize = key.GetValue("OnvifXSize") is int onvifXSize && onvifXSize > 0 ? onvifXSize : null;
         settings.OnvifYSize = key.GetValue("OnvifYSize") is int onvifYSize && onvifYSize > 0 ? onvifYSize : null;
@@ -244,6 +245,7 @@ public class RegistryService
         key.SetValue("FpsOverlayPosition", settings.FpsOverlayPosition ?? AppSettings.FpsOverlayPositionBottomLeft, RegistryValueKind.String);
         key.DeleteValue("TopMost", false);
         key.SetValue("SoundEnabled", settings.SoundEnabled ? 1 : 0, RegistryValueKind.DWord);
+        key.SetValue("SoundLevel", Math.Clamp(settings.SoundLevel, 0, 100), RegistryValueKind.DWord);
         key.SetValue("AspectRatioMode", settings.AspectRatioMode ?? AppSettings.AutoAspectRatio, RegistryValueKind.String);
         if (settings.OnvifXSize.HasValue && settings.OnvifXSize.Value > 0)
         {

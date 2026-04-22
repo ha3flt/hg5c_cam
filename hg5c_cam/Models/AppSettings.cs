@@ -23,6 +23,7 @@ public class AppSettings
     public bool ShowFpsOverlay { get; set; }
     public string FpsOverlayPosition { get; set; } = FpsOverlayPositionBottomLeft;
     public bool SoundEnabled { get; set; }
+    public int SoundLevel { get; set; } = 100;
     public string AspectRatioMode { get; set; } = AutoAspectRatio;
     public int? OnvifXSize { get; set; }
     public int? OnvifYSize { get; set; }

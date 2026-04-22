@@ -19,6 +19,7 @@
         showFpsOverlay: true
         fpsOverlayPosition: "Bottom left"
         soundEnabled: true
+        soundLevel: 100
         aspectRatioMode: "Auto"
         windowLeft: 1566
         windowTop: 703
@@ -43,11 +44,12 @@
         showFpsOverlay: true
         fpsOverlayPosition: "Bottom left"
         soundEnabled: true
+        soundLevel: 100
         aspectRatioMode: "16:9"
-        windowLeft: 1679
-        windowTop: 770
-        windowWidth: 869
-        windowHeight: 548
+        windowLeft: 1676
+        windowTop: 762
+        windowWidth: 873
+        windowHeight: 550
         windowMaximized: false
   - slot: 2
     streams:
@@ -69,6 +71,7 @@
         showFpsOverlay: true
         fpsOverlayPosition: "Top left"
         soundEnabled: false
+        soundLevel: 100
         aspectRatioMode: "Auto"
         windowLeft: 1468
         windowTop: 648
@@ -77,14 +80,14 @@
         windowMaximized: true
       - stream: 2
         cameraName: "UltraBeam tornya"
-        url: "rtsp://kkcnet.ddns.net:21970/cam/realmonitor?channel=1&subtype=1&unicast=true&proto=Onvif"
+        url: "rtsp://kkcnet.ddns.net:21970/cam/realmonitor?channel=1&subtype=2&unicast=true&proto=Onvif"
         username: "hg5cop"
         password: "Hg5c-Ha5kkc"
         useOnvif: true
         onvifDeviceServiceUrl: "http://kkcnet.ddns.net:21950/onvif/device_service"
-        onvifProfileToken: "MediaProfile00001"
-        onvifXSize: 704
-        onvifYSize: 576
+        onvifProfileToken: "MediaProfile00002"
+        onvifXSize: 1280
+        onvifYSize: 720
         autoResolveRtspFromOnvif: false
         reconnectDelaySec: 3
         connectionRetries: 25
@@ -93,11 +96,12 @@
         showFpsOverlay: true
         fpsOverlayPosition: "Top left"
         soundEnabled: false
-        aspectRatioMode: "16:9"
-        windowLeft: 1679
-        windowTop: 770
-        windowWidth: 869
-        windowHeight: 548
+        soundLevel: 100
+        aspectRatioMode: "Auto"
+        windowLeft: 1661
+        windowTop: 749
+        windowWidth: 873
+        windowHeight: 550
         windowMaximized: false
   - slot: 3
     streams:
@@ -119,6 +123,7 @@
         showFpsOverlay: true
         fpsOverlayPosition: "Top left"
         soundEnabled: false
+        soundLevel: 100
         aspectRatioMode: "Auto"
         windowLeft: 828
         windowTop: 244
@@ -127,14 +132,14 @@
         windowMaximized: true
       - stream: 2
         cameraName: "URH torony"
-        url: "rtsp://kkcnet.ddns.net:21972/cam/realmonitor?channel=1&subtype=1&unicast=true&proto=Onvif"
+        url: "rtsp://kkcnet.ddns.net:21972/cam/realmonitor?channel=1&subtype=2&unicast=true&proto=Onvif"
         username: "hg5cop"
         password: "Hg5c-Ha5kkc"
         useOnvif: true
         onvifDeviceServiceUrl: "http://kkcnet.ddns.net:21952/onvif/device_service"
-        onvifProfileToken: "MediaProfile00001"
-        onvifXSize: 704
-        onvifYSize: 576
+        onvifProfileToken: "MediaProfile00002"
+        onvifXSize: 1280
+        onvifYSize: 720
         autoResolveRtspFromOnvif: false
         reconnectDelaySec: 3
         connectionRetries: 25
@@ -143,11 +148,12 @@
         showFpsOverlay: true
         fpsOverlayPosition: "Top left"
         soundEnabled: false
-        aspectRatioMode: "16:9"
-        windowLeft: 1676
-        windowTop: 771
-        windowWidth: 870
-        windowHeight: 548
+        soundLevel: 100
+        aspectRatioMode: "Auto"
+        windowLeft: 1647
+        windowTop: 743
+        windowWidth: 883
+        windowHeight: 555
         windowMaximized: false
   - slot: 4
     streams:
@@ -169,6 +175,7 @@
         showFpsOverlay: true
         fpsOverlayPosition: "Bottom left"
         soundEnabled: true
+        soundLevel: 100
         aspectRatioMode: "Auto"
         windowLeft: 826
         windowTop: 771
@@ -193,9 +200,10 @@
         showFpsOverlay: true
         fpsOverlayPosition: "Bottom left"
         soundEnabled: true
+        soundLevel: 100
         aspectRatioMode: "Auto"
-        windowLeft: 1676
-        windowTop: 771
-        windowWidth: 870
-        windowHeight: 548
+        windowLeft: 1661
+        windowTop: 749
+        windowWidth: 873
+        windowHeight: 550
         windowMaximized: false

@@ -69,6 +69,7 @@ public partial class SetupDialog : Window
         this.RetriesTextBox.Text = settings.ConnectionRetries.ToString();
         this.NetworkTimeoutTextBox.Text = settings.NetworkTimeoutSec.ToString();
         this.SoundCheckBox.IsChecked = settings.SoundEnabled;
+        this.SoundLevelSlider.Value = Math.Clamp(settings.SoundLevel, 0, 100);
         this.FpsOverlayCheckBox.IsChecked = settings.ShowFpsOverlay;
         this.WindowMaximizedCheckBox.IsChecked = settings.WindowMaximized;
         this._onvifXSize = settings.OnvifXSize;
@@ -105,6 +106,7 @@ public partial class SetupDialog : Window
         this.NetworkTimeoutTextBox.TextChanged += (_, _) => RefreshState();
         this.SoundCheckBox.Checked += (_, _) => RefreshState();
         this.SoundCheckBox.Unchecked += (_, _) => RefreshState();
+        this.SoundLevelSlider.ValueChanged += (_, _) => RefreshState();
         this.FpsOverlayCheckBox.Checked += (_, _) => RefreshState();
         this.FpsOverlayCheckBox.Unchecked += (_, _) => RefreshState();
         this.FpsOverlayPositionComboBox.SelectionChanged += (_, _) => RefreshState();
@@ -140,6 +142,7 @@ public partial class SetupDialog : Window
         UpdatePictureSizeText();
         this.AspectRatioLabel.Text = LocalizationService.Translate(language, "AspectRatio");
         this.SoundCheckBox.Content = LocalizationService.Translate(language, "StreamSoundSimple");
+        this.SoundLevelLabel.Text = LocalizationService.Translate(language, "CameraSoundLevel");
         this.MaxFpsLabel.Text = LocalizationService.Translate(language, "MaxFps");
         this.ConnectionDelayLabel.Text = LocalizationService.Translate(language, "ConnectionDelay");
         this.ConnectionRetriesLabel.Text = LocalizationService.Translate(language, "ConnectionRetries");
@@ -545,6 +548,7 @@ public partial class SetupDialog : Window
             settings.Url = RebaseRtspHostToOnvifDeviceService(settings.Url, settings.OnvifDeviceServiceUrl);
         }
         settings.SoundEnabled = this.SoundCheckBox.IsChecked == true;
+        settings.SoundLevel = (int)Math.Round(this.SoundLevelSlider.Value);
         settings.ShowFpsOverlay = this.FpsOverlayCheckBox.IsChecked == true;
         settings.FpsOverlayPosition = this.FpsOverlayPositionComboBox.SelectedValue as string ?? AppSettings.FpsOverlayPositionBottomLeft;
         settings.AspectRatioMode = this.AspectRatioComboBox.SelectedValue as string ?? AppSettings.AutoAspectRatio;
@@ -603,6 +607,7 @@ public partial class SetupDialog : Window
             ShowFpsOverlay = settings.ShowFpsOverlay,
             FpsOverlayPosition = settings.FpsOverlayPosition,
             SoundEnabled = settings.SoundEnabled,
+            SoundLevel = settings.SoundLevel,
             AspectRatioMode = settings.AspectRatioMode,
             OnvifXSize = settings.OnvifXSize,
             OnvifYSize = settings.OnvifYSize,
@@ -616,6 +621,6 @@ public partial class SetupDialog : Window
 
     private static bool IsSame(AppSettings left, AppSettings right)
     {
-        return left.CameraName == right.CameraName && left.Url == right.Url && left.Username == right.Username && left.Password == right.Password && left.UseOnvif == right.UseOnvif && left.OnvifDeviceServiceUrl == right.OnvifDeviceServiceUrl && left.OnvifProfileToken == right.OnvifProfileToken && left.AutoResolveRtspFromOnvif == right.AutoResolveRtspFromOnvif && left.ReconnectDelaySec == right.ReconnectDelaySec && left.ConnectionRetries == right.ConnectionRetries && left.NetworkTimeoutSec == right.NetworkTimeoutSec && left.MaxFps == right.MaxFps && left.ShowFpsOverlay == right.ShowFpsOverlay && left.FpsOverlayPosition == right.FpsOverlayPosition && left.SoundEnabled == right.SoundEnabled && left.AspectRatioMode == right.AspectRatioMode && left.OnvifXSize == right.OnvifXSize && left.OnvifYSize == right.OnvifYSize && left.WindowMaximized == right.WindowMaximized;
+        return left.CameraName == right.CameraName && left.Url == right.Url && left.Username == right.Username && left.Password == right.Password && left.UseOnvif == right.UseOnvif && left.OnvifDeviceServiceUrl == right.OnvifDeviceServiceUrl && left.OnvifProfileToken == right.OnvifProfileToken && left.AutoResolveRtspFromOnvif == right.AutoResolveRtspFromOnvif && left.ReconnectDelaySec == right.ReconnectDelaySec && left.ConnectionRetries == right.ConnectionRetries && left.NetworkTimeoutSec == right.NetworkTimeoutSec && left.MaxFps == right.MaxFps && left.ShowFpsOverlay == right.ShowFpsOverlay && left.FpsOverlayPosition == right.FpsOverlayPosition && left.SoundEnabled == right.SoundEnabled && left.SoundLevel == right.SoundLevel && left.AspectRatioMode == right.AspectRatioMode && left.OnvifXSize == right.OnvifXSize && left.OnvifYSize == right.OnvifYSize && left.WindowMaximized == right.WindowMaximized;
     }
 }

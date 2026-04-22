@@ -1,7 +1,7 @@
 <Window x:Class="hg5c_cam.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="hg5c_cam" Height="520" Width="920" WindowStartupLocation="Manual" KeyDown="MainWindow_OnKeyDown">
+        Title="hg5c_cam" Height="520" Width="920" WindowStartupLocation="Manual" PreviewKeyDown="MainWindow_OnKeyDown">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -173,6 +173,8 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                             <RowDefinition Height="Auto"/>
+                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -184,16 +186,18 @@
 
                         <Button Grid.Row="0" Grid.Column="2" Style="{StaticResource NavigationButtonStyle}" Tag="UpFast" Content="↑↑" Width="32" Height="26" Margin="2,2,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
                         <Button Grid.Row="2" Grid.Column="0" Style="{StaticResource NavigationButtonStyle}" Tag="LeftFast" Content="←←" Width="32" Height="26" Margin="2,-24,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
-                        <Button Grid.Row="2" Grid.Column="1" Style="{StaticResource NavigationButtonStyle}" Tag="Left" Content="←" Width="32" Height="26" Margin="2,-24,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
-                        <Button Grid.Row="1" Grid.Column="2" Style="{StaticResource NavigationButtonStyle}" Tag="Up" Content="↑" Width="32" Height="26" Margin="2,2,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
-                        <Button Grid.Row="2" Grid.Column="3" Style="{StaticResource NavigationButtonStyle}" Tag="Right" Content="→" Width="32" Height="26" Margin="2,-24,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
+                        <Button Grid.Row="2" Grid.Column="1" Style="{StaticResource NavigationButtonStyle}" Tag="Left" Content="←" Width="32" Height="26" Margin="2,-24,2,2" BorderThickness="3" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
+                        <Button Grid.Row="1" Grid.Column="2" Style="{StaticResource NavigationButtonStyle}" Tag="Up" Content="↑" Width="32" Height="26" Margin="2,2,2,2" BorderThickness="3" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
+                        <Button Grid.Row="2" Grid.Column="3" Style="{StaticResource NavigationButtonStyle}" Tag="Right" Content="→" Width="32" Height="26" Margin="2,-24,2,2" BorderThickness="3" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
                         <Button Grid.Row="2" Grid.Column="4" Style="{StaticResource NavigationButtonStyle}" Tag="RightFast" Content="→→" Width="32" Height="26" Margin="2,-24,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
-                        <Button Grid.Row="2" Grid.Column="2" Style="{StaticResource NavigationButtonStyle}" Tag="Down" Content="↓" Width="32" Height="26" Margin="2,2,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
+                        <Button Grid.Row="2" Grid.Column="2" Style="{StaticResource NavigationButtonStyle}" Tag="Down" Content="↓" Width="32" Height="26" Margin="2,2,2,2" BorderThickness="3" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
                         <Button Grid.Row="3" Grid.Column="0" Style="{StaticResource NavigationButtonStyle}" Tag="ZoomOutFast" Content="--" Width="32" Height="26" Margin="2,10,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
-                        <Button Grid.Row="3" Grid.Column="1" Style="{StaticResource NavigationButtonStyle}" Tag="ZoomOut" Content="-" Width="32" Height="26" Margin="2,10,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
+                        <Button Grid.Row="3" Grid.Column="1" Style="{StaticResource NavigationButtonStyle}" Tag="ZoomOut" Content="-" Width="32" Height="26" Margin="2,10,2,2" BorderThickness="3" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
                         <Button Grid.Row="3" Grid.Column="2" Style="{StaticResource NavigationButtonStyle}" Tag="DownFast" Content="↓↓" Width="32" Height="26" Margin="2,-6,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
-                        <Button Grid.Row="3" Grid.Column="3" Style="{StaticResource NavigationButtonStyle}" Tag="ZoomIn" Content="+" Width="32" Height="26" Margin="2,10,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
+                        <Button Grid.Row="3" Grid.Column="3" Style="{StaticResource NavigationButtonStyle}" Tag="ZoomIn" Content="+" Width="32" Height="26" Margin="2,10,2,2" BorderThickness="3" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
                         <Button Grid.Row="3" Grid.Column="4" Style="{StaticResource NavigationButtonStyle}" Tag="ZoomInFast" Content="++" Width="32" Height="26" Margin="2,10,2,2" PreviewMouseLeftButtonDown="NavigationButton_OnPreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="NavigationButton_OnPreviewMouseLeftButtonUp"/>
+                         <TextBlock x:Name="NavigationVolumeLabelText" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="5" Text="Volume" Foreground="White" Margin="2,10,2,2"/>
+                         <Slider x:Name="NavigationVolumeSlider" Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="5" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" Margin="2,0,2,2" ValueChanged="NavigationVolumeSlider_OnValueChanged"/>
                     </Grid>
                 </Grid>
             </Border>

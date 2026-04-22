@@ -79,6 +79,15 @@ public class PlayerService
     public long ConsumeFrameCount() => Interlocked.Exchange(ref this._frameCounter, 0);
     public long ConsumePacketBytes() => Interlocked.Exchange(ref this._packetBytesCounter, 0);
 
+    public void SetVolume(int soundLevel)
+    {
+        var volume = Math.Clamp(soundLevel, 0, 100) / 100f;
+        if (this._waveOut is not null)
+        {
+            this._waveOut.Volume = volume;
+        }
+    }
+
     private async Task RunLoopAsync(string rtspUrl, int maxFps, int reconnectDelaySec, int retries, int networkTimeoutSec, bool soundEnabled, string audioOutputDeviceName, int soundLevel, int generation, CancellationToken token)
     {
         try

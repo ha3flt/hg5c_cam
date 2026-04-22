@@ -52,6 +52,7 @@ public partial class MainWindow : Window
     private AppSettings _settings;
     private GlobalSettings _globalSettings;
     private readonly DispatcherTimer _windowSaveDebounce;
+    private readonly DispatcherTimer _navigationVolumeSaveDebounce;
     private WindowState _previousState;
     private WindowStyle _previousStyle;
     private bool _isFullscreen;
@@ -77,6 +78,9 @@ public partial class MainWindow : Window
     private double _zoomStepSize = FixedZoomStepSize;
     private bool _resumePlaybackAfterPowerResume;
     private bool _isShuttingDown;
+    private bool _isUpdatingNavigationVolumeSlider;
+    private int _navigationVolumeTargetSlot;
+    private int _navigationVolumeTargetStreamNumber = RegistryService.PrimaryStreamNumber;
 
     private enum PresetOverlayState
     {
@@ -131,6 +135,8 @@ public partial class MainWindow : Window
         UpdateStreamMenuState(this._playerService.State);
         this._windowSaveDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         this._windowSaveDebounce.Tick += (_, _) => SaveWindowMetrics();
+        this._navigationVolumeSaveDebounce = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        this._navigationVolumeSaveDebounce.Tick += NavigationVolumeSaveDebounce_OnTick;
         SizeChanged += (_, _) =>
         {
             RestartWindowDebounce();
@@ -1242,6 +1248,7 @@ public partial class MainWindow : Window
 
         this.PresetsOverlayTitleText.Text = LocalizationService.Translate(this._language, "Presets").Replace("_", string.Empty);
         this.NavigationOverlayTitleText.Text = LocalizationService.Translate(this._language, "Navigation");
+        this.NavigationVolumeLabelText.Text = LocalizationService.Translate(this._language, "NavigationVolume");
         UpdateCameraMenuLabels();
         UpdateOverlayText();
         foreach (var viewport in this._viewports.Values)
@@ -1387,7 +1394,7 @@ public partial class MainWindow : Window
                 this._settings.NetworkTimeoutSec,
                 this._settings.SoundEnabled && this._globalSettings.EnableSound,
                 this._globalSettings.AudioOutputDeviceName,
-                this._globalSettings.SoundLevel);
+                this._settings.SoundLevel);
             this._navigationStepSize = FixedNavigationStepSize;
             this._zoomStepSize = FixedZoomStepSize;
             StartFpsCounterForSlot(this._slot, this._playerService);
@@ -1466,9 +1473,9 @@ public partial class MainWindow : Window
                 viewport.Settings.ReconnectDelaySec,
                 viewport.Settings.ConnectionRetries,
                 viewport.Settings.NetworkTimeoutSec,
-                false,
-                string.Empty,
-                0);
+                viewport.Settings.SoundEnabled && this._globalSettings.EnableSound,
+                this._globalSettings.AudioOutputDeviceName,
+                viewport.Settings.SoundLevel);
             this._navigationStepSize = FixedNavigationStepSize;
             this._zoomStepSize = FixedZoomStepSize;
             this._backgroundPlayers[viewport.Slot] = player;
@@ -1799,6 +1806,8 @@ public partial class MainWindow : Window
             {
                 _ = RefreshPresetsMenuAsync();
             }
+
+            UpdateNavigationVolumeUi(targetSlot);
 
             var overlayState = ResolvePresetOverlayState(targetSlot);
             switch (overlayState)
@@ -3009,6 +3018,87 @@ public partial class MainWindow : Window
         UpdatePresetsOverlayVisibility();
     }
 
+    private void NavigationVolumeSlider_OnValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (this._isUpdatingNavigationVolumeSlider)
+        {
+            return;
+        }
+
+        var targetSlot = ResolveNavigationVolumeTargetSlot();
+        if (!this._viewports.TryGetValue(targetSlot, out var viewport))
+        {
+            return;
+        }
+
+        var soundLevel = Math.Clamp((int)Math.Round(this.NavigationVolumeSlider.Value), 0, 100);
+        if (viewport.Settings.SoundLevel == soundLevel)
+        {
+            return;
+        }
+
+        viewport.Settings.SoundLevel = soundLevel;
+        if (targetSlot == this._slot)
+        {
+            this._settings.SoundLevel = soundLevel;
+            this._playerService.SetVolume(soundLevel);
+        }
+        else if (this._backgroundPlayers.TryGetValue(targetSlot, out var backgroundPlayer))
+        {
+            backgroundPlayer.SetVolume(soundLevel);
+        }
+
+        this._navigationVolumeTargetSlot = targetSlot;
+        this._navigationVolumeTargetStreamNumber = RegistryService.GetStreamNumberFromGlobalSettings(this._globalSettings);
+        this._navigationVolumeSaveDebounce.Stop();
+        this._navigationVolumeSaveDebounce.Start();
+    }
+
+    private int ResolveNavigationVolumeTargetSlot()
+    {
+        var targetSlot = GetPresetTargetSlot();
+        if (targetSlot > 0 && this._viewports.ContainsKey(targetSlot))
+        {
+            return targetSlot;
+        }
+
+        if (this._navigationVolumeTargetSlot > 0 && this._viewports.ContainsKey(this._navigationVolumeTargetSlot))
+        {
+            return this._navigationVolumeTargetSlot;
+        }
+
+        return this._slot;
+    }
+
+    private void UpdateNavigationVolumeUi(int overlayTargetSlot)
+    {
+        var targetSlot = overlayTargetSlot > 0 && this._viewports.ContainsKey(overlayTargetSlot)
+            ? overlayTargetSlot
+            : ResolveNavigationVolumeTargetSlot();
+        if (!this._viewports.TryGetValue(targetSlot, out var viewport))
+        {
+            return;
+        }
+
+        var soundLevel = Math.Clamp(viewport.Settings.SoundLevel, 0, 100);
+        this._navigationVolumeTargetSlot = targetSlot;
+        this._isUpdatingNavigationVolumeSlider = true;
+        this.NavigationVolumeSlider.Value = soundLevel;
+        this._isUpdatingNavigationVolumeSlider = false;
+    }
+
+    private void NavigationVolumeSaveDebounce_OnTick(object? sender, EventArgs e)
+    {
+        this._navigationVolumeSaveDebounce.Stop();
+        var targetSlot = this._navigationVolumeTargetSlot;
+        if (targetSlot <= 0 || !this._viewports.TryGetValue(targetSlot, out var viewport))
+        {
+            return;
+        }
+
+        this._registryService.SaveSettings(targetSlot, viewport.Settings, this._navigationVolumeTargetStreamNumber);
+    }
+
     private bool TryGetViewportSlotFromSource(DependencyObject? source, out int slot)
     {
         slot = 0;
@@ -3429,6 +3519,7 @@ public partial class MainWindow : Window
                 builder.AppendLine($"        showFpsOverlay: {ToYamlBool(settings.ShowFpsOverlay)}");
                 builder.AppendLine($"        fpsOverlayPosition: {QuoteYaml(settings.FpsOverlayPosition)}");
                 builder.AppendLine($"        soundEnabled: {ToYamlBool(settings.SoundEnabled)}");
+                builder.AppendLine($"        soundLevel: {settings.SoundLevel}");
                 builder.AppendLine($"        aspectRatioMode: {QuoteYaml(settings.AspectRatioMode)}");
                 builder.AppendLine($"        windowLeft: {ToYamlNullableInt(settings.WindowLeft)}");
                 builder.AppendLine($"        windowTop: {ToYamlNullableInt(settings.WindowTop)}");
@@ -3624,6 +3715,9 @@ public partial class MainWindow : Window
             case "soundEnabled":
                 settings.SoundEnabled = ParseYamlBool(rawValue, settings.SoundEnabled);
                 return true;
+            case "soundLevel":
+                settings.SoundLevel = Math.Clamp(ParseYamlInt(rawValue, settings.SoundLevel), 0, 100);
+                return true;
             case "aspectRatioMode":
                 settings.AspectRatioMode = UnquoteYaml(rawValue);
                 return true;
@@ -3666,6 +3760,7 @@ public partial class MainWindow : Window
         if (providedKeys.Contains("showFpsOverlay")) target.ShowFpsOverlay = source.ShowFpsOverlay;
         if (providedKeys.Contains("fpsOverlayPosition")) target.FpsOverlayPosition = source.FpsOverlayPosition;
         if (providedKeys.Contains("soundEnabled")) target.SoundEnabled = source.SoundEnabled;
+        if (providedKeys.Contains("soundLevel")) target.SoundLevel = source.SoundLevel;
         if (providedKeys.Contains("aspectRatioMode")) target.AspectRatioMode = source.AspectRatioMode;
         if (providedKeys.Contains("windowLeft")) target.WindowLeft = source.WindowLeft;
         if (providedKeys.Contains("windowTop")) target.WindowTop = source.WindowTop;
