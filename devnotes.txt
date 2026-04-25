@@ -8,9 +8,9 @@ msiexec /i hg5c_cam.Telepítő.msi /l*v install.log
 - Version: 1.2.build (increasing number, max. 5 digits?)
 
 *****
-- How the per-stream windowMaximized works exactly?
+- Encrypt passwords in the config file, too
 
-- Is the per-instance volume setting ok, or is it not enough comfortable?
+- How does the per-stream windowMaximized work exactly?
 
 - Do the controls scale poorly at other resolutions? The bottom of the Settings window covers the
     controls, but when? Is it DPI-aware? Need to ask.
@@ -19,9 +19,6 @@ msiexec /i hg5c_cam.Telepítő.msi /l*v install.log
 
 - Even after a Hungarian installation, it apparently starts up in English on a Hungarian Windows
   system — why?
-
-- Sometimes the username/password is included in the RTSP URL, sometimes it isn't (only with the
-  operational room camera, or is there another reason?)
 
 -----
 - The frames per second dropped to 8-10 instead of 25?? - Only after a while; could it be a virtual

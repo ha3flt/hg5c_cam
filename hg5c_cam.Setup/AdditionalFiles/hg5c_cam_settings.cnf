@@ -28,14 +28,12 @@
         windowMaximized: true
       - stream: 2
         cameraName: "Adószoba"
-        url: "rtsp://kkcnet.ddns.net:21974/Streaming/Channels/102?transportmode=unicast&profile=Profile_2"
+        url: "rtsp://kkcnet.ddns.net:21974/Streaming/Channels/101?transportmode=unicast&profile=Profile_3"
         username: "hg5cop"
         password: "Hg5c-Ha5kkc"
         useOnvif: true
         onvifDeviceServiceUrl: "http://kkcnet.ddns.net:21954/onvif/device_service"
-        onvifProfileToken: "Profile_2"
-        onvifXSize: 704
-        onvifYSize: 576
+        onvifProfileToken: "Profile_3"
         autoResolveRtspFromOnvif: false
         reconnectDelaySec: 3
         connectionRetries: 25
@@ -45,7 +43,7 @@
         fpsOverlayPosition: "Bottom left"
         soundEnabled: true
         soundLevel: 100
-        aspectRatioMode: "16:9"
+        aspectRatioMode: "Auto"
         windowLeft: 1676
         windowTop: 762
         windowWidth: 873
@@ -202,8 +200,8 @@
         soundEnabled: true
         soundLevel: 100
         aspectRatioMode: "Auto"
-        windowLeft: 1661
-        windowTop: 749
-        windowWidth: 873
-        windowHeight: 550
+        windowLeft: 1697
+        windowTop: 776
+        windowWidth: 849
+        windowHeight: 536
         windowMaximized: false

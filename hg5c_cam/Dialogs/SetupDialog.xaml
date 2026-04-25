@@ -28,7 +28,7 @@
                 <TextBox x:Name="UsernameTextBox" Margin="0,4,0,0"/>
                 <TextBlock x:Name="PasswordLabel" Text="Password" Margin="0,4,0,0"/>
                 <PasswordBox x:Name="PasswordBox" Margin="0,4,0,0"/>
-                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
                     <Button x:Name="ResolveOnvifButton" Content="Resolve RTSP from ONVIF" Width="190" HorizontalAlignment="Left"/>
                     <TextBlock x:Name="ResolveOnvifStatusText" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="#FF24802A" Visibility="Collapsed"/>
                 </StackPanel>
@@ -42,9 +42,9 @@
                 <ComboBox x:Name="AspectRatioComboBox" Margin="0,4,0,0"/>
                 <CheckBox x:Name="WindowMaximizedCheckBox" Content="Maximized" Margin="0,8,0,0"/>
                 <CheckBox x:Name="SoundCheckBox" Content="Stream sound" Margin="0,4,0,0"/>
-                <TextBlock x:Name="SoundLevelLabel" Text="Sound level" Margin="0,6,0,0"/>
+                <TextBlock x:Name="SoundLevelLabel" Text="Sound level" Margin="0,6,0,4"/>
                 <Slider x:Name="SoundLevelSlider" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"/>
-                <Separator Margin="0,12,0,8"/>
+                <Separator Margin="0,8,0,8"/>
                 <TextBlock x:Name="MaxFpsLabel" Text="Max. displayed FPS (0 = unlimited)"/>
                 <TextBox x:Name="MaxFpsTextBox" Margin="0,4,0,0"/>
                 <TextBlock x:Name="ConnectionDelayLabel" Text="Connection delay (sec)" Margin="0,6,0,0"/>

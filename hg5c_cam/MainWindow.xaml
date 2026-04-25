@@ -13,7 +13,7 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <Menu x:Name="MenuBar" Grid.Column="0" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Background="Transparent">
+            <Menu x:Name="MenuBar" Grid.Column="0" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Background="Transparent" Margin="6,0,6,0">
                 <MenuItem x:Name="FileMenuItem" Header="_File">
                     <MenuItem x:Name="GlobalSettingsMenuItem" Header="_Program settings" Click="GlobalSettingsMenuItem_OnClick"/>
                     <Separator/>
@@ -129,7 +129,7 @@
                                         <Setter Property="Background" Value="#E8FFFFFF"/>
                                     </Trigger>
                                     <Trigger Property="IsDragging" Value="True">
-                                        <Setter Property="Background" Value="#E8FFFFFF"/>
+                                        <Setter Property="Background" Value="#F0C8C8C8"/>
                                     </Trigger>
                                 </Style.Triggers>
                             </Style>

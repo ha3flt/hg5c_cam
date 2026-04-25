@@ -2665,11 +2665,11 @@ public partial class MainWindow : Window
     private void ApplyMenuShortcutTexts()
     {
         this.GlobalSettingsMenuItem.InputGestureText = GetShortcutDisplayText("Ctrl+P", "Ctrl+P");
-        this.CameraSettingsMenuItem.InputGestureText = GetShortcutDisplayText("Ctrl+A", "Ctrl+K");
+        this.CameraSettingsMenuItem.InputGestureText = GetShortcutDisplayText("Ctrl+A", "Ctrl+A");
         this.StartStreamMenuItem.InputGestureText = GetShortcutDisplayText("Ctrl+R", "Ctrl+I");
         this.StopStreamMenuItem.InputGestureText = GetShortcutDisplayText("Ctrl+O", "Ctrl+L");
         this.HighQualityMenuItem.InputGestureText = GetShortcutDisplayText("Ctrl+Q", "Ctrl+M");
-        this.LowBandwidthMenuItem.InputGestureText = GetShortcutDisplayText("Ctrl+L", "Ctrl+A");
+        this.LowBandwidthMenuItem.InputGestureText = GetShortcutDisplayText("Ctrl+L", "Ctrl+O");
         this.StreamSoundMenuItem.InputGestureText = GetShortcutDisplayText("Ctrl+S", "Ctrl+H");
         this.TopmostMenuItem.InputGestureText = GetShortcutDisplayText("Ctrl+T", "Ctrl+F");
         this.FpsOverlayMenuItem.InputGestureText = GetShortcutDisplayText("Ctrl+U", "Ctrl+U");
@@ -3323,7 +3323,7 @@ public partial class MainWindow : Window
                 GlobalSettingsMenuItem_OnClick(this.GlobalSettingsMenuItem, new RoutedEventArgs());
                 e.Handled = true;
                 return;
-            case Key.K when isHu:
+            case Key.A when isHu:
             case Key.A when !isHu:
                 CameraSettingsMenuItem_OnClick(this.CameraSettingsMenuItem, new RoutedEventArgs());
                 e.Handled = true;
@@ -3343,7 +3343,7 @@ public partial class MainWindow : Window
                 HighQualityMenuItem_OnClick(this.HighQualityMenuItem, new RoutedEventArgs());
                 e.Handled = true;
                 return;
-            case Key.A when isHu:
+            case Key.O when isHu:
             case Key.L when !isHu:
                 LowBandwidthMenuItem_OnClick(this.LowBandwidthMenuItem, new RoutedEventArgs());
                 e.Handled = true;
