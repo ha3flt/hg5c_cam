@@ -25,6 +25,7 @@ We used ODM (ONVIF Device Manager) for a while, but it had its limitations. For 
 - ONVIF-based RTSP URL resolution
 - RTSP stream playback with sound
 - PTZ presets overlay/menu support
+- Adaptive PTZ, two-speed rotating and zooming by buttons
 - Simultaneous display of multiple camera streams
 - Per-camera window position, size, and parameters persistence
 - Manual aspect ratio correction if neeed

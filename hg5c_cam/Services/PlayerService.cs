@@ -31,6 +31,7 @@ public class PlayerService
     public PlayerState State { get; private set; } = PlayerState.Stopped;
     public event Action<PlayerState>? StateChanged;
     public event Action<double>? StreamAspectRatioChanged;
+    public event Action<bool>? StreamAudioAvailabilityChanged;
 
     private static string T(string key) => LocalizationService.TranslateCurrent(key);
 
@@ -42,6 +43,7 @@ public class PlayerService
     public void Play(string rtspUrl, int maxFps, int reconnectDelaySec, int retries, int networkTimeoutSec, bool soundEnabled, string audioOutputDeviceName, int soundLevel)
     {
         Stop();
+        StreamAudioAvailabilityChanged?.Invoke(false);
         var generation = Interlocked.Increment(ref this._playbackGeneration);
         this._cts = new CancellationTokenSource();
         _ = RunLoopAsync(rtspUrl, maxFps, reconnectDelaySec, retries, networkTimeoutSec, soundEnabled, audioOutputDeviceName, soundLevel, generation, this._cts.Token).ContinueWith(_ =>
@@ -188,70 +190,72 @@ public class PlayerService
             ThrowIfError(ffmpeg.avcodec_parameters_to_context(videoCodecContext, videoStream->codecpar), T("ExceptionPlayerCopyCodecParametersFailed"));
             ThrowIfError(ffmpeg.avcodec_open2(videoCodecContext, videoCodec, null), T("ExceptionPlayerOpenCodecFailed"));
 
-            if (soundEnabled)
+            audioStreamIndex = ffmpeg.av_find_best_stream(formatContext, AVMediaType.AVMEDIA_TYPE_AUDIO, -1, -1, null, 0);
+            if (audioStreamIndex >= 0)
             {
-                audioStreamIndex = ffmpeg.av_find_best_stream(formatContext, AVMediaType.AVMEDIA_TYPE_AUDIO, -1, -1, null, 0);
-                if (audioStreamIndex >= 0)
+                StreamAudioAvailabilityChanged?.Invoke(true);
+            }
+
+            if (soundEnabled && audioStreamIndex >= 0)
+            {
+                var audioStream = formatContext->streams[audioStreamIndex];
+                var audioCodec = ffmpeg.avcodec_find_decoder(audioStream->codecpar->codec_id);
+                if (audioCodec is not null)
                 {
-                    var audioStream = formatContext->streams[audioStreamIndex];
-                    var audioCodec = ffmpeg.avcodec_find_decoder(audioStream->codecpar->codec_id);
-                    if (audioCodec is not null)
+                    audioCodecContext = ffmpeg.avcodec_alloc_context3(audioCodec);
+                    if (audioCodecContext is not null &&
+                        ffmpeg.avcodec_parameters_to_context(audioCodecContext, audioStream->codecpar) >= 0 &&
+                        ffmpeg.avcodec_open2(audioCodecContext, audioCodec, null) >= 0)
                     {
-                        audioCodecContext = ffmpeg.avcodec_alloc_context3(audioCodec);
-                        if (audioCodecContext is not null &&
-                            ffmpeg.avcodec_parameters_to_context(audioCodecContext, audioStream->codecpar) >= 0 &&
-                            ffmpeg.avcodec_open2(audioCodecContext, audioCodec, null) >= 0)
+                        var inputChannels = audioCodecContext->ch_layout.nb_channels > 0
+                            ? audioCodecContext->ch_layout.nb_channels
+                            : 2;
+                        outputAudioChannels = inputChannels <= 1 ? 1 : 2;
+                        outputAudioSampleRate = audioCodecContext->sample_rate > 0 ? audioCodecContext->sample_rate : outputAudioSampleRate;
+                        AVChannelLayout outputLayout = default;
+                        AVChannelLayout defaultInputLayout = default;
+                        ffmpeg.av_channel_layout_default(&outputLayout, outputAudioChannels);
+
+                        AVChannelLayout* inputLayoutPtr = &audioCodecContext->ch_layout;
+                        if (inputLayoutPtr->nb_channels <= 0)
                         {
-                            var inputChannels = audioCodecContext->ch_layout.nb_channels > 0
-                                ? audioCodecContext->ch_layout.nb_channels
-                                : 2;
-                            outputAudioChannels = inputChannels <= 1 ? 1 : 2;
-                            outputAudioSampleRate = audioCodecContext->sample_rate > 0 ? audioCodecContext->sample_rate : outputAudioSampleRate;
-                            AVChannelLayout outputLayout = default;
-                            AVChannelLayout defaultInputLayout = default;
-                            ffmpeg.av_channel_layout_default(&outputLayout, outputAudioChannels);
-
-                            AVChannelLayout* inputLayoutPtr = &audioCodecContext->ch_layout;
-                            if (inputLayoutPtr->nb_channels <= 0)
-                            {
-                                ffmpeg.av_channel_layout_default(&defaultInputLayout, inputChannels);
-                                inputLayoutPtr = &defaultInputLayout;
-                            }
-
-                            swrContext = ffmpeg.swr_alloc();
-
-                            var swrConfigured = swrContext is not null &&
-                                ffmpeg.av_opt_set_chlayout(swrContext, "in_chlayout", inputLayoutPtr, 0) >= 0 &&
-                                ffmpeg.av_opt_set_chlayout(swrContext, "out_chlayout", &outputLayout, 0) >= 0 &&
-                                ffmpeg.av_opt_set_int(swrContext, "in_sample_rate", audioCodecContext->sample_rate, 0) >= 0 &&
-                                ffmpeg.av_opt_set_int(swrContext, "out_sample_rate", outputAudioSampleRate, 0) >= 0 &&
-                                ffmpeg.av_opt_set_sample_fmt(swrContext, "in_sample_fmt", audioCodecContext->sample_fmt, 0) >= 0 &&
-                                ffmpeg.av_opt_set_sample_fmt(swrContext, "out_sample_fmt", AVSampleFormat.AV_SAMPLE_FMT_S16, 0) >= 0 &&
-                                ffmpeg.swr_init(swrContext) >= 0;
-
-                            ffmpeg.av_channel_layout_uninit(&outputLayout);
-                            ffmpeg.av_channel_layout_uninit(&defaultInputLayout);
-
-                            if (swrConfigured)
-                            {
-                                InitializeAudioOutput(outputAudioSampleRate, outputAudioChannels, audioOutputDeviceName, soundLevel / 100f);
-                            }
-                            else
-                            {
-                                if (swrContext is not null)
-                                {
-                                    ffmpeg.swr_free(&swrContext);
-                                }
-
-                                ffmpeg.avcodec_free_context(&audioCodecContext);
-                                audioStreamIndex = -1;
-                            }
+                            ffmpeg.av_channel_layout_default(&defaultInputLayout, inputChannels);
+                            inputLayoutPtr = &defaultInputLayout;
                         }
-                        else if (audioCodecContext is not null)
+
+                        swrContext = ffmpeg.swr_alloc();
+
+                        var swrConfigured = swrContext is not null &&
+                            ffmpeg.av_opt_set_chlayout(swrContext, "in_chlayout", inputLayoutPtr, 0) >= 0 &&
+                            ffmpeg.av_opt_set_chlayout(swrContext, "out_chlayout", &outputLayout, 0) >= 0 &&
+                            ffmpeg.av_opt_set_int(swrContext, "in_sample_rate", audioCodecContext->sample_rate, 0) >= 0 &&
+                            ffmpeg.av_opt_set_int(swrContext, "out_sample_rate", outputAudioSampleRate, 0) >= 0 &&
+                            ffmpeg.av_opt_set_sample_fmt(swrContext, "in_sample_fmt", audioCodecContext->sample_fmt, 0) >= 0 &&
+                            ffmpeg.av_opt_set_sample_fmt(swrContext, "out_sample_fmt", AVSampleFormat.AV_SAMPLE_FMT_S16, 0) >= 0 &&
+                            ffmpeg.swr_init(swrContext) >= 0;
+
+                        ffmpeg.av_channel_layout_uninit(&outputLayout);
+                        ffmpeg.av_channel_layout_uninit(&defaultInputLayout);
+
+                        if (swrConfigured)
                         {
+                            InitializeAudioOutput(outputAudioSampleRate, outputAudioChannels, audioOutputDeviceName, soundLevel / 100f);
+                        }
+                        else
+                        {
+                            if (swrContext is not null)
+                            {
+                                ffmpeg.swr_free(&swrContext);
+                            }
+
                             ffmpeg.avcodec_free_context(&audioCodecContext);
                             audioStreamIndex = -1;
                         }
+                    }
+                    else if (audioCodecContext is not null)
+                    {
+                        ffmpeg.avcodec_free_context(&audioCodecContext);
+                        audioStreamIndex = -1;
                     }
                 }
             }

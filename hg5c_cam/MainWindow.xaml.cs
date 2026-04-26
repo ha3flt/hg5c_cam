@@ -4,6 +4,7 @@ using hg5c_cam.Services;
 using Microsoft.Win32;
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
@@ -28,6 +29,10 @@ public partial class MainWindow : Window
     private const double FixedNavigationStepSizeFast = FixedNavigationStepSize * 50;
     private const double FixedZoomStepSize = 0.01;
     private const double FixedZoomStepSizeFast = FixedZoomStepSize * 10;
+    private const double AdaptiveWideScale = 1.0;
+    private const double AdaptiveTeleScale = 0.35;
+    private const double AdaptiveFastMultiplierPanTilt = 12.0;
+    private const double AdaptiveFastMultiplierZoom = 8.0;
     private const int PresetsDisplayLimit = 32;
     private const string SettingsExportFileName = "hg5c_cam_settings.cnf";
     private const int WmSizing = 0x0214;
@@ -61,6 +66,11 @@ public partial class MainWindow : Window
     private readonly Dictionary<int, List<OnvifPreset>> _presetCache = [];
     private readonly HashSet<int> _presetLoadsInProgress = [];
     private readonly Dictionary<int, int> _presetLoadVersions = [];
+    private readonly Dictionary<int, StreamRuntimeCapabilities> _runtimeCapabilityCache = [];
+    private readonly HashSet<int> _runtimeCapabilityLoadsInProgress = [];
+    private readonly Dictionary<int, int> _runtimeCapabilityLoadVersions = [];
+    private readonly Dictionary<int, Action<bool>> _backgroundPlayerAudioHandlers = [];
+    private Action<bool>? _primaryPlayerAudioHandler;
     private CancellationTokenSource? _navigationMoveCancellationTokenSource;
     private bool _isVideoHostHovered;
     private int _hoveredSlot;
@@ -102,6 +112,15 @@ public partial class MainWindow : Window
         public string StatusResourceKey { get; set; } = "Disconnected";
     }
 
+    private sealed class StreamRuntimeCapabilities
+    {
+        public OnvifPtzCapabilities PtzCapabilities { get; set; } = new();
+        public AdaptivePtzProfile AdaptivePtzProfile { get; set; } = new();
+        public bool IsPtzInfoLoaded { get; set; }
+        public bool? HasAudio { get; set; }
+        public double? LastKnownZoomNormalized { get; set; }
+    }
+
     public MainWindow(int slot, RegistryService registryService, AppSettings settings, string language)
     {
         InitializeComponent();
@@ -120,6 +139,7 @@ public partial class MainWindow : Window
         this._playerService.Initialize(GetSelectedVideoImage());
         this._playerService.StateChanged += OnPrimaryPlayerStateChanged;
         this._playerService.StreamAspectRatioChanged += OnStreamAspectRatioChanged;
+        AttachPrimaryAudioAvailabilityHandler();
         var isTopmostWindow = this._registryService.LoadTopmostWindow();
         Topmost = isTopmostWindow;
         this.TopmostMenuItem.IsChecked = isTopmostWindow;
@@ -435,11 +455,14 @@ public partial class MainWindow : Window
                 if (state == PlayerState.Disconnected)
                 {
                     ClearPresetCacheForSlot(slot);
+                    ClearRuntimeCapabilityCacheForSlot(slot);
                     if (isPrimarySlot && this._isFullscreen)
                     {
                         ExitFullscreen();
                     }
                 }
+
+                RefreshNavigationOverlayControlStates();
             }
             finally
             {
@@ -853,6 +876,7 @@ public partial class MainWindow : Window
         }
 
         ApplyFpsOverlaySettings();
+        RefreshNavigationOverlayControlStates();
     }
 
     private void UpdateSelectionBorder()
@@ -909,6 +933,7 @@ public partial class MainWindow : Window
             UpdateSelectionBorder();
             UpdateActiveVisibleCameraToolbarSelection();
             UpdatePresetsOverlayVisibility();
+            RefreshNavigationOverlayControlStates();
 
             if (restartPlayback || (allowAutoPlaybackFromCurrentState && this._playerService.State is PlayerState.Playing or PlayerState.Connecting))
             {
@@ -939,6 +964,7 @@ public partial class MainWindow : Window
         UpdateSelectionBorder();
         UpdateActiveVisibleCameraToolbarSelection();
         UpdatePresetsOverlayVisibility();
+        RefreshNavigationOverlayControlStates();
 
         if (restartPlayback || (!switchedPrimaryPlayer && previousSlot != slot && allowAutoPlaybackFromCurrentState && this._playerService.State is PlayerState.Playing or PlayerState.Connecting))
         {
@@ -961,11 +987,17 @@ public partial class MainWindow : Window
         }
 
         var previousPrimary = this._playerService;
+        previousPrimary.StreamAudioAvailabilityChanged -= this._primaryPlayerAudioHandler;
         previousPrimary.StateChanged -= OnPrimaryPlayerStateChanged;
         previousPrimary.StreamAspectRatioChanged -= OnStreamAspectRatioChanged;
         previousPrimary.StreamAspectRatioChanged += OnBackgroundStreamAspectRatioChanged;
 
         targetPlayer.StreamAspectRatioChanged -= OnBackgroundStreamAspectRatioChanged;
+        if (this._backgroundPlayerAudioHandlers.TryGetValue(targetSlot, out var targetAudioHandler))
+        {
+            targetPlayer.StreamAudioAvailabilityChanged -= targetAudioHandler;
+            this._backgroundPlayerAudioHandlers.Remove(targetSlot);
+        }
         if (this._backgroundPlayerStateHandlers.TryGetValue(targetSlot, out var targetStateHandler))
         {
             targetPlayer.StateChanged -= targetStateHandler;
@@ -975,6 +1007,7 @@ public partial class MainWindow : Window
         targetPlayer.StateChanged -= OnPrimaryPlayerStateChanged;
         targetPlayer.StateChanged += OnPrimaryPlayerStateChanged;
         targetPlayer.StreamAspectRatioChanged += OnStreamAspectRatioChanged;
+        AttachPrimaryAudioAvailabilityHandler(targetPlayer);
 
         this._backgroundPlayers.Remove(targetSlot);
         if (this._backgroundPlayerStateHandlers.TryGetValue(previousSlot, out var previousStateHandler))
@@ -986,6 +1019,9 @@ public partial class MainWindow : Window
         Action<PlayerState> primaryAsBackgroundStateHandler = state => OnBackgroundPlayerStateChanged(previousSlot, state);
         previousPrimary.StateChanged += primaryAsBackgroundStateHandler;
         this._backgroundPlayerStateHandlers[previousSlot] = primaryAsBackgroundStateHandler;
+        Action<bool> primaryAsBackgroundAudioHandler = hasAudio => OnPlayerAudioAvailabilityChanged(previousSlot, hasAudio);
+        previousPrimary.StreamAudioAvailabilityChanged += primaryAsBackgroundAudioHandler;
+        this._backgroundPlayerAudioHandlers[previousSlot] = primaryAsBackgroundAudioHandler;
         this._backgroundPlayers[previousSlot] = previousPrimary;
         this._playerService = targetPlayer;
 
@@ -995,6 +1031,160 @@ public partial class MainWindow : Window
         StartFpsCounterForSlot(previousSlot, previousPrimary);
         StartFpsCounterForSlot(targetSlot, this._playerService);
         return true;
+    }
+
+    private int IncrementRuntimeCapabilityLoadVersion(int slot)
+    {
+        var next = this._runtimeCapabilityLoadVersions.TryGetValue(slot, out var current) ? current + 1 : 1;
+        this._runtimeCapabilityLoadVersions[slot] = next;
+        return next;
+    }
+
+    private int GetRuntimeCapabilityLoadVersion(int slot)
+    {
+        return this._runtimeCapabilityLoadVersions.TryGetValue(slot, out var version) ? version : 0;
+    }
+
+    private StreamRuntimeCapabilities GetOrCreateRuntimeCapabilities(int slot)
+    {
+        if (!this._runtimeCapabilityCache.TryGetValue(slot, out var capabilities))
+        {
+            capabilities = new StreamRuntimeCapabilities
+            {
+                PtzCapabilities = new OnvifPtzCapabilities(),
+                AdaptivePtzProfile = CreateAdaptivePtzProfile(new OnvifPtzCapabilities())
+            };
+            this._runtimeCapabilityCache[slot] = capabilities;
+        }
+
+        return capabilities;
+    }
+
+    private void ClearRuntimeCapabilityCacheForSlot(int slot)
+    {
+        if (slot <= 0)
+        {
+            return;
+        }
+
+        IncrementRuntimeCapabilityLoadVersion(slot);
+        this._runtimeCapabilityLoadsInProgress.Remove(slot);
+        this._runtimeCapabilityCache.Remove(slot);
+    }
+
+    private void AttachPrimaryAudioAvailabilityHandler(PlayerService? player = null)
+    {
+        var targetPlayer = player ?? this._playerService;
+
+        if (this._primaryPlayerAudioHandler is not null)
+        {
+            targetPlayer.StreamAudioAvailabilityChanged -= this._primaryPlayerAudioHandler;
+        }
+
+        this._primaryPlayerAudioHandler = hasAudio => OnPlayerAudioAvailabilityChanged(this._slot, hasAudio);
+        targetPlayer.StreamAudioAvailabilityChanged += this._primaryPlayerAudioHandler;
+    }
+
+    private void OnPlayerAudioAvailabilityChanged(int slot, bool hasAudio)
+    {
+        RunOnUiThread(() =>
+        {
+            var capabilities = GetOrCreateRuntimeCapabilities(slot);
+            capabilities.HasAudio = hasAudio;
+            RefreshNavigationOverlayControlStates();
+        }, DispatcherPriority.Background);
+    }
+
+    private async Task EnsureRuntimeCapabilitiesLoadedAsync(int slot, AppSettings settings)
+    {
+        if (slot <= 0 || !this._viewports.ContainsKey(slot))
+        {
+            return;
+        }
+
+        var capabilities = GetOrCreateRuntimeCapabilities(slot);
+        if (settings.UseOnvif)
+        {
+            if (capabilities.IsPtzInfoLoaded)
+            {
+                return;
+            }
+
+            if (!this._runtimeCapabilityLoadsInProgress.Add(slot))
+            {
+                return;
+            }
+
+            var requestVersion = IncrementRuntimeCapabilityLoadVersion(slot);
+            try
+            {
+                var ptzCapabilities = await this._onvifService.GetPtzCapabilitiesAsync(settings, CancellationToken.None);
+                if (GetRuntimeCapabilityLoadVersion(slot) != requestVersion)
+                {
+                    return;
+                }
+
+                capabilities.PtzCapabilities = ptzCapabilities;
+                capabilities.AdaptivePtzProfile = CreateAdaptivePtzProfile(ptzCapabilities);
+                capabilities.LastKnownZoomNormalized = ptzCapabilities.CurrentZoomNormalized;
+                capabilities.IsPtzInfoLoaded = true;
+            }
+            catch
+            {
+                capabilities.IsPtzInfoLoaded = true;
+            }
+            finally
+            {
+                this._runtimeCapabilityLoadsInProgress.Remove(slot);
+                RefreshNavigationOverlayControlStates();
+            }
+        }
+        else
+        {
+            capabilities.PtzCapabilities = new OnvifPtzCapabilities();
+            capabilities.AdaptivePtzProfile = CreateAdaptivePtzProfile(capabilities.PtzCapabilities);
+            capabilities.LastKnownZoomNormalized = null;
+            capabilities.IsPtzInfoLoaded = true;
+            RefreshNavigationOverlayControlStates();
+        }
+    }
+
+    private static AdaptivePtzProfile CreateAdaptivePtzProfile(OnvifPtzCapabilities capabilities)
+    {
+        var normalPanStep = ResolveNormalPanTiltStep(capabilities);
+        var normalZoomStep = ResolveNormalZoomStep(capabilities);
+
+        return new AdaptivePtzProfile
+        {
+            NormalPanTiltMinStep = normalPanStep,
+            FastPanTiltMinStep = normalPanStep * AdaptiveFastMultiplierPanTilt,
+            NormalZoomMinStep = normalZoomStep,
+            FastZoomMinStep = normalZoomStep * AdaptiveFastMultiplierZoom,
+            MaxScaleAtWide = AdaptiveWideScale,
+            MaxScaleAtTele = AdaptiveTeleScale
+        };
+    }
+
+    private static double ResolveNormalPanTiltStep(OnvifPtzCapabilities capabilities)
+    {
+        var candidates = new[]
+        {
+            capabilities.PanMinStep,
+            capabilities.TiltMinStep
+        };
+
+        var min = candidates.Where(x => x.HasValue && x.Value > 0)
+            .Select(x => x!.Value)
+            .DefaultIfEmpty(FixedNavigationStepSize)
+            .Min();
+
+        return Math.Clamp(min, FixedNavigationStepSize / 10d, 0.25d);
+    }
+
+    private static double ResolveNormalZoomStep(OnvifPtzCapabilities capabilities)
+    {
+        var baseValue = capabilities.ZoomMinStep is > 0 ? capabilities.ZoomMinStep.Value : FixedZoomStepSize;
+        return Math.Clamp(baseValue, FixedZoomStepSize / 10d, 0.5d);
     }
 
     private void ApplyVideoStretchModeForViewport(CameraViewport viewport)
@@ -1289,6 +1479,19 @@ public partial class MainWindow : Window
     private void UpdateWindowTitle()
     {
         var title = "hg5c_cam";
+
+        var informationalVersion = Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        var cleanInformationalVersion = informationalVersion?.Split('+')[0];
+        var version = !string.IsNullOrWhiteSpace(cleanInformationalVersion)
+            ? cleanInformationalVersion
+            : Assembly.GetExecutingAssembly().GetName().Version?.ToString()
+              ?? "";
+        if (!string.IsNullOrWhiteSpace(version))
+        {
+            title += $" v{version}";
+        }
+
         if (this._slot > 0)
         {
             title += $" - {GetEffectiveCameraName(this._settings.CameraName, this._slot)}";
@@ -1384,6 +1587,8 @@ public partial class MainWindow : Window
 
             this._registryService.SaveSettings(this._slot, this._settings);
             this._registryService.AddUrlToHistory(rtspUrl);
+            ClearRuntimeCapabilityCacheForSlot(this._slot);
+            _ = EnsureRuntimeCapabilitiesLoadedAsync(this._slot, this._settings);
             ApplyConfiguredAspectRatio();
             ApplyVideoStretchMode();
             this._playerService.Play(
@@ -1399,6 +1604,7 @@ public partial class MainWindow : Window
             this._zoomStepSize = FixedZoomStepSize;
             StartFpsCounterForSlot(this._slot, this._playerService);
             _ = EnsurePresetCacheLoadedAsync(this._slot, this._settings);
+            RefreshNavigationOverlayControlStates();
 
             _ = StartBackgroundPlayersAsync();
             _ = RefreshPresetsMenuAsync();
@@ -1460,6 +1666,8 @@ public partial class MainWindow : Window
             }
 
             this._registryService.SaveSettings(viewport.Slot, viewport.Settings);
+            ClearRuntimeCapabilityCacheForSlot(viewport.Slot);
+            _ = EnsureRuntimeCapabilitiesLoadedAsync(viewport.Slot, viewport.Settings);
             var player = new PlayerService();
             player.Initialize(viewport.VideoImage);
             player.StreamAspectRatioChanged += OnBackgroundStreamAspectRatioChanged;
@@ -1467,6 +1675,9 @@ public partial class MainWindow : Window
             Action<PlayerState> stateHandler = state => OnBackgroundPlayerStateChanged(slot, state);
             player.StateChanged += stateHandler;
             this._backgroundPlayerStateHandlers[slot] = stateHandler;
+            Action<bool> audioHandler = hasAudio => OnPlayerAudioAvailabilityChanged(slot, hasAudio);
+            player.StreamAudioAvailabilityChanged += audioHandler;
+            this._backgroundPlayerAudioHandlers[slot] = audioHandler;
             player.Play(
                 rtspUrl,
                 viewport.Settings.MaxFps,
@@ -1489,6 +1700,10 @@ public partial class MainWindow : Window
         foreach (var pair in this._backgroundPlayers)
         {
             pair.Value.StreamAspectRatioChanged -= OnBackgroundStreamAspectRatioChanged;
+            if (this._backgroundPlayerAudioHandlers.TryGetValue(pair.Key, out var audioHandler))
+            {
+                pair.Value.StreamAudioAvailabilityChanged -= audioHandler;
+            }
             if (this._backgroundPlayerStateHandlers.TryGetValue(pair.Key, out var stateHandler))
             {
                 pair.Value.StateChanged -= stateHandler;
@@ -1497,10 +1712,12 @@ public partial class MainWindow : Window
             pair.Value.Stop();
             StopFpsCounterForSlot(pair.Key);
             ClearPresetCacheForSlot(pair.Key);
+            ClearRuntimeCapabilityCacheForSlot(pair.Key);
         }
 
         this._backgroundPlayers.Clear();
         this._backgroundPlayerStateHandlers.Clear();
+        this._backgroundPlayerAudioHandlers.Clear();
     }
 
     private void StartFpsCounterForSlot(int slot, PlayerService player)
@@ -1818,6 +2035,7 @@ public partial class MainWindow : Window
                     this.PresetsOverlayList.IsEnabled = true;
                     UpdatePresetsOverlayPlacement();
                     QueueOverlayPlacementRefresh();
+                    RefreshNavigationOverlayControlStates();
                     break;
                 case PresetOverlayState.NavigationOnly:
                     this.PresetsOverlayBorder.Visibility = Visibility.Collapsed;
@@ -1825,12 +2043,14 @@ public partial class MainWindow : Window
                     this.PresetsOverlayList.IsEnabled = false;
                     UpdatePresetsOverlayPlacement();
                     QueueOverlayPlacementRefresh();
+                    RefreshNavigationOverlayControlStates();
                     break;
                 default:
                     this.PresetsOverlayBorder.Visibility = Visibility.Collapsed;
                     this.NavigationOverlayBorder.Visibility = Visibility.Collapsed;
                     this.PresetsOverlayList.IsEnabled = false;
                     StopNavigationMove();
+                    RefreshNavigationOverlayControlStates();
                     break;
             }
         }
@@ -2693,6 +2913,7 @@ public partial class MainWindow : Window
         this.StreamSoundMenuItem.IsChecked = this._settings.SoundEnabled;
         UpdateViewToolbarSelection();
         ApplyFpsOverlaySettings();
+        RefreshNavigationOverlayControlStates();
     }
 
     private void ExitMenuItem_OnClick(object sender, RoutedEventArgs e) => Close();
@@ -2829,7 +3050,9 @@ public partial class MainWindow : Window
         StopBackgroundPlayers();
         StopAllFpsCounters();
         ClearPresetCacheForSlot(this._slot);
+        ClearRuntimeCapabilityCacheForSlot(this._slot);
         this._playerService.Stop();
+        RefreshNavigationOverlayControlStates();
     }
 
     private void HighQualityMenuItem_OnClick(object sender, RoutedEventArgs e)
@@ -2891,6 +3114,10 @@ public partial class MainWindow : Window
     {
         var streamNumber = RegistryService.GetStreamNumberFromGlobalSettings(this._globalSettings);
         this._onvifService.InvalidateCache();
+        foreach (var viewport in this._viewports.Values)
+        {
+            ClearRuntimeCapabilityCacheForSlot(viewport.Slot);
+        }
         this._settings = this._registryService.LoadSettings(this._slot, streamNumber);
         if (this._viewports.TryGetValue(this._slot, out var selectedViewport))
         {
@@ -3085,6 +3312,60 @@ public partial class MainWindow : Window
         this._isUpdatingNavigationVolumeSlider = true;
         this.NavigationVolumeSlider.Value = soundLevel;
         this._isUpdatingNavigationVolumeSlider = false;
+        RefreshNavigationOverlayControlStates();
+    }
+
+    private void RefreshNavigationOverlayControlStates()
+    {
+        var targetSlot = ResolveNavigationOverlayTargetSlot();
+        if (targetSlot <= 0 || !this._viewports.TryGetValue(targetSlot, out var viewport))
+        {
+            SetNavigationControlsEnabled(false, false, false);
+            this.NavigationVolumeSlider.IsEnabled = false;
+            return;
+        }
+
+        var playerState = GetPlayerStateForSlot(targetSlot);
+        var isPlaying = playerState == PlayerState.Playing;
+        var runtime = GetOrCreateRuntimeCapabilities(targetSlot);
+
+        var hasPanTilt = viewport.Settings.UseOnvif && isPlaying && runtime.PtzCapabilities.HasPanTilt;
+        var hasZoom = viewport.Settings.UseOnvif && isPlaying && runtime.PtzCapabilities.HasZoom;
+        SetNavigationControlsEnabled(hasPanTilt, hasZoom, isPlaying);
+
+        var hasAudio = runtime.HasAudio ?? false;
+        this.NavigationVolumeSlider.IsEnabled = isPlaying && hasAudio;
+    }
+
+    private int ResolveNavigationOverlayTargetSlot()
+    {
+        var targetSlot = GetPresetTargetSlot();
+        if (targetSlot > 0 && this._viewports.ContainsKey(targetSlot))
+        {
+            return targetSlot;
+        }
+
+        return this._slot;
+    }
+
+    private void SetNavigationControlsEnabled(bool panTiltEnabled, bool zoomEnabled, bool overlayEnabled)
+    {
+        var panTilt = overlayEnabled && panTiltEnabled;
+        var zoom = overlayEnabled && zoomEnabled;
+
+        this.NavigationLeftButton.IsEnabled = panTilt;
+        this.NavigationLeftFastButton.IsEnabled = panTilt;
+        this.NavigationRightButton.IsEnabled = panTilt;
+        this.NavigationRightFastButton.IsEnabled = panTilt;
+        this.NavigationUpButton.IsEnabled = panTilt;
+        this.NavigationUpFastButton.IsEnabled = panTilt;
+        this.NavigationDownButton.IsEnabled = panTilt;
+        this.NavigationDownFastButton.IsEnabled = panTilt;
+
+        this.NavigationZoomInButton.IsEnabled = zoom;
+        this.NavigationZoomInFastButton.IsEnabled = zoom;
+        this.NavigationZoomOutButton.IsEnabled = zoom;
+        this.NavigationZoomOutFastButton.IsEnabled = zoom;
     }
 
     private void NavigationVolumeSaveDebounce_OnTick(object? sender, EventArgs e)
@@ -3165,8 +3446,9 @@ public partial class MainWindow : Window
         var normalizedDirection = isFastDirection
             ? direction[..^"Fast".Length]
             : direction;
-        this._navigationStepSize = isFastDirection ? FixedNavigationStepSizeFast : FixedNavigationStepSize;
-        this._zoomStepSize = isFastDirection ? FixedZoomStepSizeFast : FixedZoomStepSize;
+        var (panStep, zoomStep) = ResolveAdaptiveStepSizes(targetSlot, isFastDirection);
+        this._navigationStepSize = panStep;
+        this._zoomStepSize = zoomStep;
 
         var (pan, tilt, zoom) = normalizedDirection switch
         {
@@ -3188,6 +3470,42 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private (double PanTiltStep, double ZoomStep) ResolveAdaptiveStepSizes(int targetSlot, bool isFast)
+    {
+        if (targetSlot <= 0 || !this._viewports.TryGetValue(targetSlot, out var viewport) || !viewport.Settings.UseOnvif)
+        {
+            return isFast
+                ? (FixedNavigationStepSizeFast, FixedZoomStepSizeFast)
+                : (FixedNavigationStepSize, FixedZoomStepSize);
+        }
+
+        var runtime = GetOrCreateRuntimeCapabilities(targetSlot);
+        var profile = runtime.AdaptivePtzProfile;
+        var zoomNormalized = ResolveCurrentZoomNormalized(runtime);
+        var adaptiveScale = ResolveAdaptiveScale(profile, zoomNormalized);
+
+        var basePanStep = isFast ? profile.FastPanTiltMinStep : profile.NormalPanTiltMinStep;
+        var baseZoomStep = isFast ? profile.FastZoomMinStep : profile.NormalZoomMinStep;
+
+        var panStep = Math.Clamp(basePanStep * adaptiveScale, FixedNavigationStepSize / 10d, 1.0d);
+        var zoomStep = Math.Clamp(baseZoomStep * adaptiveScale, FixedZoomStepSize / 10d, 1.0d);
+        return (panStep, zoomStep);
+    }
+
+    private static double ResolveAdaptiveScale(AdaptivePtzProfile profile, double? zoomNormalized)
+    {
+        var z = Math.Clamp(zoomNormalized ?? 0d, 0d, 1d);
+        var wide = profile.MaxScaleAtWide;
+        var tele = profile.MaxScaleAtTele;
+        return wide + ((tele - wide) * z);
+    }
+
+    private static double? ResolveCurrentZoomNormalized(StreamRuntimeCapabilities runtime)
+    {
+        return runtime.LastKnownZoomNormalized
+               ?? runtime.PtzCapabilities.CurrentZoomNormalized;
+    }
+
     private void NavigationButton_OnPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
         StopNavigationMove();
@@ -3203,6 +3521,7 @@ public partial class MainWindow : Window
 
         _ = Task.Run(async () =>
         {
+            var activeSlot = this._slot;
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
@@ -3217,6 +3536,8 @@ public partial class MainWindow : Window
                         {
                             await this._onvifService.ZoomOutAsync(this._settings, -zoomDelta, cancellationToken);
                         }
+
+                        TrackZoomEstimate(activeSlot, zoomDelta);
                     }
                     else
                     {
@@ -3238,6 +3559,20 @@ public partial class MainWindow : Window
                 }
             }
         }, cancellationToken);
+    }
+
+    private void TrackZoomEstimate(int slot, double zoomDelta)
+    {
+        if (!this._runtimeCapabilityCache.TryGetValue(slot, out var runtime) || !runtime.PtzCapabilities.HasZoom)
+        {
+            return;
+        }
+
+        var baseStep = runtime.PtzCapabilities.ZoomMinStep ?? FixedZoomStepSize;
+        var deltaNormalized = zoomDelta / Math.Max(baseStep, FixedZoomStepSize / 10d);
+        var current = runtime.LastKnownZoomNormalized ?? runtime.PtzCapabilities.CurrentZoomNormalized ?? 0d;
+        var next = Math.Clamp(current + (deltaNormalized * 0.005d), 0d, 1d);
+        runtime.LastKnownZoomNormalized = next;
     }
 
     private void StopNavigationMove()

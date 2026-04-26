@@ -8,6 +8,10 @@ msiexec /i hg5c_cam.Telepítő.msi /l*v install.log
 - Version: 1.2.build (increasing number, max. 5 digits?)
 
 *****
+- Refine adaptive PTZ. Add step sizes to the individual camera settings?
+
+- Trim the corners of the example photos
+
 - Encrypt passwords in the config file, too
 
 - How does the per-stream windowMaximized work exactly?

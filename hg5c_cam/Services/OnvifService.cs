@@ -14,12 +14,15 @@ public class OnvifService
 {
     private static readonly UriKind AbsoluteUri = UriKind.Absolute;
     private static readonly TimeSpan SoapRequestTimeout = TimeSpan.FromSeconds(6);
+    private const double DefaultPanTiltMinStep = 0.001;
+    private const double DefaultZoomMinStep = 0.01;
     private readonly object _ptzContextSync = new();
     private PtzContext? _cachedPtzContext;
 
     private sealed class PtzContext
     {
         public required string CacheKey { get; init; }
+        public required Uri MediaServiceUri { get; init; }
         public required string ProfileToken { get; init; }
         public required NetworkCredential? Credentials { get; init; }
         public required List<Uri> PtzCandidates { get; init; }
@@ -127,6 +130,41 @@ public class OnvifService
         }
 
         throw new InvalidOperationException(T("ExceptionOnvifMoveRelativeFailed"));
+    }
+
+    public async Task<OnvifPtzCapabilities> GetPtzCapabilitiesAsync(AppSettings settings, CancellationToken cancellationToken = default)
+    {
+        if (!settings.UseOnvif)
+        {
+            throw new InvalidOperationException(T("ExceptionOnvifDisabled"));
+        }
+
+        var context = await ResolvePtzContextAsync(settings, cancellationToken).ConfigureAwait(false);
+        Exception? lastError = null;
+
+        foreach (var ptzCandidate in context.PtzCandidates)
+        {
+            try
+            {
+                return await ResolvePtzCapabilitiesAsync(
+                    ptzCandidate,
+                    context.MediaServiceUri,
+                    context.ProfileToken,
+                    context.Credentials,
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                lastError = ex;
+            }
+        }
+
+        if (lastError is not null)
+        {
+            throw new InvalidOperationException(lastError.Message, lastError);
+        }
+
+        return new OnvifPtzCapabilities();
     }
 
     public Task ZoomInAsync(AppSettings settings, double zoomDelta = 0.1, CancellationToken cancellationToken = default)
@@ -572,6 +610,7 @@ public class OnvifService
             var context = new PtzContext
             {
                 CacheKey = cacheKey,
+                MediaServiceUri = mediaServiceUri,
                 ProfileToken = profileToken,
                 Credentials = credentials,
                 PtzCandidates = [ptzServiceUri]
@@ -588,6 +627,280 @@ public class OnvifService
         {
             throw new InvalidOperationException(TF("ExceptionOnvifResolvePtzContextFailedWithError", ex.Message), ex);
         }
+    }
+
+    private static async Task<OnvifPtzCapabilities> ResolvePtzCapabilitiesAsync(Uri ptzServiceUri, Uri mediaServiceUri, string profileToken, NetworkCredential? credentials, CancellationToken cancellationToken)
+    {
+        var ptzConfigurationToken = await ResolvePtzConfigurationTokenAsync(mediaServiceUri, profileToken, credentials, cancellationToken).ConfigureAwait(false);
+        var options = await TryGetPtzConfigurationOptionsAsync(ptzServiceUri, profileToken, ptzConfigurationToken, credentials, cancellationToken).ConfigureAwait(false);
+        var status = await TryGetPtzStatusAsync(ptzServiceUri, profileToken, credentials, cancellationToken).ConfigureAwait(false);
+
+        var panRange = ResolveAxisRange(options, "RelativePanTiltTranslationSpace", "XRange");
+        var tiltRange = ResolveAxisRange(options, "RelativePanTiltTranslationSpace", "YRange");
+        var zoomRange = ResolveAxisRange(options, "RelativeZoomTranslationSpace", "XRange");
+
+        var hasPan = panRange.HasRange || HasElement(options, "RelativePanTiltTranslationSpace");
+        var hasTilt = tiltRange.HasRange || HasElement(options, "RelativePanTiltTranslationSpace");
+        var hasZoom = zoomRange.HasRange || HasElement(options, "RelativeZoomTranslationSpace");
+
+        var currentZoom = ResolveStatusAxisValue(status, "Zoom", "x");
+        var statusPan = ResolveStatusAxisValue(status, "PanTilt", "x");
+        var statusTilt = ResolveStatusAxisValue(status, "PanTilt", "y");
+
+        if (!hasPan && statusPan.HasValue)
+        {
+            hasPan = true;
+        }
+
+        if (!hasTilt && statusTilt.HasValue)
+        {
+            hasTilt = true;
+        }
+
+        if (!hasZoom && currentZoom.HasValue)
+        {
+            hasZoom = true;
+        }
+
+        var normalizedZoom = NormalizeValue(currentZoom, zoomRange.Min, zoomRange.Max);
+        var panMinStep = ResolveMinimumStep(panRange.Min, panRange.Max, DefaultPanTiltMinStep);
+        var tiltMinStep = ResolveMinimumStep(tiltRange.Min, tiltRange.Max, DefaultPanTiltMinStep);
+        var zoomMinStep = ResolveMinimumStep(zoomRange.Min, zoomRange.Max, DefaultZoomMinStep);
+
+        if (!hasPan)
+        {
+            panMinStep = null;
+        }
+
+        if (!hasTilt)
+        {
+            tiltMinStep = null;
+        }
+
+        if (!hasZoom)
+        {
+            zoomMinStep = null;
+        }
+
+        return new OnvifPtzCapabilities
+        {
+            HasPan = hasPan,
+            HasTilt = hasTilt,
+            HasZoom = hasZoom,
+            PanMin = panRange.Min,
+            PanMax = panRange.Max,
+            TiltMin = tiltRange.Min,
+            TiltMax = tiltRange.Max,
+            ZoomMin = zoomRange.Min,
+            ZoomMax = zoomRange.Max,
+            PanMinStep = panMinStep,
+            TiltMinStep = tiltMinStep,
+            ZoomMinStep = zoomMinStep,
+            CurrentZoom = currentZoom,
+            CurrentZoomNormalized = normalizedZoom
+        };
+    }
+
+    private static async Task<string?> ResolvePtzConfigurationTokenAsync(Uri mediaServiceUri, string profileToken, NetworkCredential? credentials, CancellationToken cancellationToken)
+    {
+        var escapedToken = SecurityElement.Escape(profileToken);
+        if (string.IsNullOrWhiteSpace(escapedToken))
+        {
+            return null;
+        }
+
+        var media10Action = "http://www.onvif.org/ver10/media/wsdl/GetProfile";
+        var media10Body = $"<trt:GetProfile xmlns:trt=\"http://www.onvif.org/ver10/media/wsdl\"><trt:ProfileToken>{escapedToken}</trt:ProfileToken></trt:GetProfile>";
+
+        XDocument document;
+        try
+        {
+            document = await SendSoapRequestAsync(mediaServiceUri, media10Action, media10Body, credentials, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            var media20Action = "http://www.onvif.org/ver20/media/wsdl/GetProfile";
+            var media20Body = $"<tr2:GetProfile xmlns:tr2=\"http://www.onvif.org/ver20/media/wsdl\"><tr2:Token>{escapedToken}</tr2:Token></tr2:GetProfile>";
+            document = await SendSoapRequestAsync(mediaServiceUri, media20Action, media20Body, credentials, cancellationToken).ConfigureAwait(false);
+        }
+
+        var profileNode = document.Descendants().FirstOrDefault(x =>
+            string.Equals(x.Name.LocalName, "Profile", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(x.Name.LocalName, "Profiles", StringComparison.OrdinalIgnoreCase));
+
+        var ptzToken = profileNode?
+            .Descendants()
+            .FirstOrDefault(x => string.Equals(x.Name.LocalName, "PTZConfiguration", StringComparison.OrdinalIgnoreCase))?
+            .Attribute("token")?.Value;
+
+        if (!string.IsNullOrWhiteSpace(ptzToken))
+        {
+            return ptzToken.Trim();
+        }
+
+        return profileNode?
+            .Descendants()
+            .FirstOrDefault(x => string.Equals(x.Name.LocalName, "PTZConfigurationToken", StringComparison.OrdinalIgnoreCase))?
+            .Value?.Trim();
+    }
+
+    private static async Task<XDocument?> TryGetPtzConfigurationOptionsAsync(Uri ptzServiceUri, string profileToken, string? configurationToken, NetworkCredential? credentials, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(profileToken))
+        {
+            return null;
+        }
+
+        var escapedProfile = SecurityElement.Escape(profileToken);
+        var escapedConfig = SecurityElement.Escape(configurationToken);
+        var configTokenNode = string.IsNullOrWhiteSpace(escapedConfig) ? string.Empty : $"<tptz:ConfigurationToken>{escapedConfig}</tptz:ConfigurationToken>";
+        var profileTokenNode = $"<tptz:ProfileToken>{escapedProfile}</tptz:ProfileToken>";
+
+        var action = "http://www.onvif.org/ver20/ptz/wsdl/GetConfigurationOptions";
+        var body = $"<tptz:GetConfigurationOptions xmlns:tptz=\"http://www.onvif.org/ver20/ptz/wsdl\">{configTokenNode}{profileTokenNode}</tptz:GetConfigurationOptions>";
+
+        try
+        {
+            return await SendSoapRequestAsync(ptzServiceUri, action, body, credentials, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            var action10 = "http://www.onvif.org/ver10/ptz/wsdl/GetConfigurationOptions";
+            var body10 = $"<tptz:GetConfigurationOptions xmlns:tptz=\"http://www.onvif.org/ver10/ptz/wsdl\">{configTokenNode}{profileTokenNode}</tptz:GetConfigurationOptions>";
+            try
+            {
+                return await SendSoapRequestAsync(ptzServiceUri, action10, body10, credentials, cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
+
+    private static async Task<XDocument?> TryGetPtzStatusAsync(Uri ptzServiceUri, string profileToken, NetworkCredential? credentials, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(profileToken))
+        {
+            return null;
+        }
+
+        var escapedProfile = SecurityElement.Escape(profileToken);
+        var action = "http://www.onvif.org/ver20/ptz/wsdl/GetStatus";
+        var body = $"<tptz:GetStatus xmlns:tptz=\"http://www.onvif.org/ver20/ptz/wsdl\"><tptz:ProfileToken>{escapedProfile}</tptz:ProfileToken></tptz:GetStatus>";
+
+        try
+        {
+            return await SendSoapRequestAsync(ptzServiceUri, action, body, credentials, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            var action10 = "http://www.onvif.org/ver10/ptz/wsdl/GetStatus";
+            var body10 = $"<tptz:GetStatus xmlns:tptz=\"http://www.onvif.org/ver10/ptz/wsdl\"><tptz:ProfileToken>{escapedProfile}</tptz:ProfileToken></tptz:GetStatus>";
+            try
+            {
+                return await SendSoapRequestAsync(ptzServiceUri, action10, body10, credentials, cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
+
+    private static (double? Min, double? Max, bool HasRange) ResolveAxisRange(XDocument? document, string spaceNodeName, string rangeNodeName)
+    {
+        if (document is null)
+        {
+            return (null, null, false);
+        }
+
+        foreach (var spaceNode in document.Descendants().Where(x => string.Equals(x.Name.LocalName, spaceNodeName, StringComparison.OrdinalIgnoreCase)))
+        {
+            var rangeNode = spaceNode.Descendants().FirstOrDefault(x => string.Equals(x.Name.LocalName, rangeNodeName, StringComparison.OrdinalIgnoreCase));
+            var min = TryParseRangeBoundary(rangeNode, "Min");
+            var max = TryParseRangeBoundary(rangeNode, "Max");
+
+            if (min.HasValue || max.HasValue)
+            {
+                return (min, max, true);
+            }
+        }
+
+        return (null, null, false);
+    }
+
+    private static bool HasElement(XDocument? document, string localName)
+    {
+        return document is not null &&
+               document.Descendants().Any(x => string.Equals(x.Name.LocalName, localName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static double? TryParseRangeBoundary(XElement? rangeNode, string boundaryName)
+    {
+        var valueNode = rangeNode?.Descendants().FirstOrDefault(x => string.Equals(x.Name.LocalName, boundaryName, StringComparison.OrdinalIgnoreCase));
+        if (double.TryParse(valueNode?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
+        {
+            return parsed;
+        }
+
+        return null;
+    }
+
+    private static double? ResolveStatusAxisValue(XDocument? document, string axisNodeName, string attributeName)
+    {
+        if (document is null)
+        {
+            return null;
+        }
+
+        var axisNode = document.Descendants().FirstOrDefault(x => string.Equals(x.Name.LocalName, axisNodeName, StringComparison.OrdinalIgnoreCase));
+        if (axisNode is null)
+        {
+            return null;
+        }
+
+        var attribute = axisNode.Attribute(attributeName) ?? axisNode.Attribute(attributeName.ToUpperInvariant());
+        if (attribute is null)
+        {
+            return null;
+        }
+
+        return double.TryParse(attribute.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : null;
+    }
+
+    private static double? NormalizeValue(double? value, double? min, double? max)
+    {
+        if (!value.HasValue || !min.HasValue || !max.HasValue)
+        {
+            return null;
+        }
+
+        var span = max.Value - min.Value;
+        if (span <= 0)
+        {
+            return null;
+        }
+
+        return Math.Clamp((value.Value - min.Value) / span, 0d, 1d);
+    }
+
+    private static double? ResolveMinimumStep(double? min, double? max, double fallback)
+    {
+        if (!min.HasValue || !max.HasValue || max.Value <= min.Value)
+        {
+            return fallback;
+        }
+
+        var step = (max.Value - min.Value) / 1000d;
+        if (double.IsNaN(step) || double.IsInfinity(step) || step <= 0)
+        {
+            return fallback;
+        }
+
+        return Math.Min(Math.Max(step, fallback / 10d), Math.Max(fallback, step));
     }
 
     private static async Task SendRelativeMoveAsync(Uri ptzServiceUri, string profileToken, double panDelta, double tiltDelta, NetworkCredential? credentials, CancellationToken cancellationToken)
