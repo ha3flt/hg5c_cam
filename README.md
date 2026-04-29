@@ -1,6 +1,6 @@
 # hg5c_cam
 
-Windows RTSP camera viewer for WPF (.NET 8) with FFmpeg-based playback and ONVIF support.
+Windows ONVIF/RTSP camera viewer for WPF (.NET 8) that uses FFmpeg for playback with hardware decoding.
 
 > Status: active development
 
