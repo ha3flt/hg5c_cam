@@ -161,6 +161,8 @@ public class PlayerService
 
     private unsafe void DecodeRtspLoop(string rtspUrl, int maxFps, int networkTimeoutSec, bool soundEnabled, string audioOutputDeviceName, int soundLevel, bool forceSoftwareDecoding, int generation, CancellationToken token)
     {
+        TrySetHardwareDecodeState(generation, false);
+
         AVFormatContext* formatContext = null;
         AVCodecContext* videoCodecContext = null;
         AVCodecContext* audioCodecContext = null;
@@ -365,11 +367,9 @@ public class PlayerService
                             nextFrameDeadline = now + frameIntervalTicks;
                         }
 
-                        if (hardwarePixelFormat != AVPixelFormat.AV_PIX_FMT_NONE &&
-                            decodedVideoFrame->format == (int)hardwarePixelFormat)
-                        {
-                            Volatile.Write(ref this._hardwareDecodeActive, 1);
-                        }
+                        var hardwareFrameInUse = hardwarePixelFormat != AVPixelFormat.AV_PIX_FMT_NONE &&
+                                                 decodedVideoFrame->format == (int)hardwarePixelFormat;
+                        TrySetHardwareDecodeState(generation, hardwareFrameInUse);
 
                         var frameToRender = ResolveFrameForRender(decodedVideoFrame, softwareVideoFrame, hardwarePixelFormat);
                         if (frameToRender is null)
@@ -833,5 +833,15 @@ public class PlayerService
         }
 
         SetState(state);
+    }
+
+    private void TrySetHardwareDecodeState(int generation, bool active)
+    {
+        if (generation != Volatile.Read(ref this._playbackGeneration))
+        {
+            return;
+        }
+
+        Volatile.Write(ref this._hardwareDecodeActive, active ? 1 : 0);
     }
 }
