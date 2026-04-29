@@ -564,6 +564,11 @@ public class PlayerService
 
     private unsafe void RenderFrame(AVFrame* decodedFrame, SwsContext* swsContext, int width, int height, int generation)
     {
+        if (Interlocked.CompareExchange(ref this._renderScheduled, 1, 0) != 0)
+        {
+            return;
+        }
+
         var stride = width * 4;
         var requiredBufferSize = stride * height;
         if (this._frameBuffer is null || this._frameBuffer.Length != requiredBufferSize)
@@ -571,30 +576,32 @@ public class PlayerService
             this._frameBuffer = new byte[requiredBufferSize];
         }
 
-        fixed (byte* dstPtr = this._frameBuffer)
+        try
         {
-            byte_ptrArray8 dstData = default;
-            int_array8 dstLineSize = default;
-            dstData[0] = dstPtr;
-            dstLineSize[0] = stride;
+            fixed (byte* dstPtr = this._frameBuffer)
+            {
+                byte_ptrArray8 dstData = default;
+                int_array8 dstLineSize = default;
+                dstData[0] = dstPtr;
+                dstLineSize[0] = stride;
 
-            _ = ffmpeg.sws_scale(
-                swsContext,
-                decodedFrame->data,
-                decodedFrame->linesize,
-                0,
-                height,
-                dstData,
-                dstLineSize);
+                _ = ffmpeg.sws_scale(
+                    swsContext,
+                    decodedFrame->data,
+                    decodedFrame->linesize,
+                    0,
+                    height,
+                    dstData,
+                    dstLineSize);
+            }
+        }
+        catch
+        {
+            Interlocked.Exchange(ref this._renderScheduled, 0);
+            throw;
         }
 
-        if (Interlocked.Exchange(ref this._renderScheduled, 1) == 1)
-        {
-            return;
-        }
-
-        var frameSnapshot = new byte[requiredBufferSize];
-        Buffer.BlockCopy(this._frameBuffer, 0, frameSnapshot, 0, requiredBufferSize);
+        var frameSnapshot = this._frameBuffer;
 
         _ = Application.Current.Dispatcher.BeginInvoke(() =>
         {

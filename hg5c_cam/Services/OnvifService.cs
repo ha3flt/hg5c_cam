@@ -16,6 +16,7 @@ public class OnvifService
     private static readonly TimeSpan SoapRequestTimeout = TimeSpan.FromSeconds(6);
     private const double DefaultPanTiltMinStep = 0.001;
     private const double DefaultZoomMinStep = 0.01;
+    private const double GlobalStepScaleMultiplier = 1.2;
     private readonly object _ptzContextSync = new();
     private PtzContext? _cachedPtzContext;
 
@@ -663,23 +664,30 @@ public class OnvifService
         }
 
         var normalizedZoom = NormalizeValue(currentZoom, zoomRange.Min, zoomRange.Max);
-        var panMinStep = ResolveMinimumStep(panRange.Min, panRange.Max, DefaultPanTiltMinStep);
-        var tiltMinStep = ResolveMinimumStep(tiltRange.Min, tiltRange.Max, DefaultPanTiltMinStep);
-        var zoomMinStep = ResolveMinimumStep(zoomRange.Min, zoomRange.Max, DefaultZoomMinStep);
+        var (panMinStep, panUsesDefault) = ResolveMinimumStep(panRange.Min, panRange.Max, DefaultPanTiltMinStep);
+        var (tiltMinStep, tiltUsesDefault) = ResolveMinimumStep(tiltRange.Min, tiltRange.Max, DefaultPanTiltMinStep);
+        var (zoomMinStep, zoomUsesDefault) = ResolveMinimumStep(zoomRange.Min, zoomRange.Max, DefaultZoomMinStep);
+
+        panMinStep = ScaleStep(panMinStep);
+        tiltMinStep = ScaleStep(tiltMinStep);
+        zoomMinStep = ScaleStep(zoomMinStep);
 
         if (!hasPan)
         {
             panMinStep = null;
+            panUsesDefault = false;
         }
 
         if (!hasTilt)
         {
             tiltMinStep = null;
+            tiltUsesDefault = false;
         }
 
         if (!hasZoom)
         {
             zoomMinStep = null;
+            zoomUsesDefault = false;
         }
 
         return new OnvifPtzCapabilities
@@ -696,6 +704,9 @@ public class OnvifService
             PanMinStep = panMinStep,
             TiltMinStep = tiltMinStep,
             ZoomMinStep = zoomMinStep,
+            PanStepUsesDefault = panUsesDefault,
+            TiltStepUsesDefault = tiltUsesDefault,
+            ZoomStepUsesDefault = zoomUsesDefault,
             CurrentZoom = currentZoom,
             CurrentZoomNormalized = normalizedZoom
         };
@@ -887,20 +898,30 @@ public class OnvifService
         return Math.Clamp((value.Value - min.Value) / span, 0d, 1d);
     }
 
-    private static double? ResolveMinimumStep(double? min, double? max, double fallback)
+    private static (double? Step, bool UsesDefault) ResolveMinimumStep(double? min, double? max, double fallback)
     {
         if (!min.HasValue || !max.HasValue || max.Value <= min.Value)
         {
-            return fallback;
+            return (fallback, true);
         }
 
         var step = (max.Value - min.Value) / 1000d;
         if (double.IsNaN(step) || double.IsInfinity(step) || step <= 0)
         {
-            return fallback;
+            return (fallback, true);
         }
 
-        return Math.Min(Math.Max(step, fallback / 10d), Math.Max(fallback, step));
+        return (Math.Min(Math.Max(step, fallback / 10d), Math.Max(fallback, step)), false);
+    }
+
+    private static double? ScaleStep(double? step)
+    {
+        if (!step.HasValue || step.Value <= 0)
+        {
+            return step;
+        }
+
+        return step.Value * GlobalStepScaleMultiplier;
     }
 
     private static async Task SendRelativeMoveAsync(Uri ptzServiceUri, string profileToken, double panDelta, double tiltDelta, NetworkCredential? credentials, CancellationToken cancellationToken)

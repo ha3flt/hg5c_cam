@@ -10,6 +10,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -24,7 +25,10 @@ public partial class MainWindow : Window
     private const double FpsOverlayBackgroundOpacity = 0.47;
     private const double PanelsOverlayBackgroundOpacity = 0.60;
     private const double PresetsOverlayMaxVideoFraction = 0.8;
-    private const double NavigationRepeatDelaySec = 0;
+    private const int NavigationRepeatIntervalMs = 80;
+    private const int NavigationDirectionSettleDelayMs = 70;
+    private const double DirectionChangeBoostPanTilt = 1.8;
+    private const double DirectionChangeBoostZoom = 1.6;
     private const double FixedNavigationStepSize = 0.001;
     private const double FixedNavigationStepSizeFast = FixedNavigationStepSize * 50;
     private const double FixedZoomStepSize = 0.01;
@@ -33,6 +37,7 @@ public partial class MainWindow : Window
     private const double AdaptiveTeleScale = 0.35;
     private const double AdaptiveFastMultiplierPanTilt = 12.0;
     private const double AdaptiveFastMultiplierZoom = 8.0;
+    private const double DisabledControlOpacity = 0.45;
     private const int PresetsDisplayLimit = 32;
     private const string SettingsExportFileName = "hg5c_cam_settings.cnf";
     private const int WmSizing = 0x0214;
@@ -105,6 +110,7 @@ public partial class MainWindow : Window
         public required Image VideoImage { get; init; }
         public required Border FpsOverlayBorder { get; init; }
         public required TextBlock FpsOverlayText { get; init; }
+        public required TextBlock FpsOverlayDetailsText { get; init; }
         public required Border SelectionBorder { get; init; }
         public required Grid StatusOverlay { get; init; }
         public required TextBlock StatusText { get; init; }
@@ -119,6 +125,13 @@ public partial class MainWindow : Window
         public bool IsPtzInfoLoaded { get; set; }
         public bool? HasAudio { get; set; }
         public double? LastKnownZoomNormalized { get; set; }
+        public bool MiniCalibrationCompleted { get; set; }
+        public double PanTiltRuntimeGain { get; set; } = 1.0;
+        public double ZoomRuntimeGain { get; set; } = 1.0;
+        public int PanTiltConsecutiveFailures { get; set; }
+        public int ZoomConsecutiveFailures { get; set; }
+        public string LastMoveDirection { get; set; } = string.Empty;
+        public DateTime LastMoveDirectionUtc { get; set; }
     }
 
     public MainWindow(int slot, RegistryService registryService, AppSettings settings, string language)
@@ -778,7 +791,22 @@ public partial class MainWindow : Window
                 Foreground = Brushes.White,
                 Text = string.Empty
             };
-            fpsOverlay.Child = fpsText;
+            var fpsDetailsText = new TextBlock
+            {
+                Foreground = Brushes.White,
+                Text = string.Empty,
+            Margin = new Thickness(0, 2, 0, 0),
+            TextWrapping = TextWrapping.Wrap,
+            MaxWidth = 420
+            };
+            var fpsStack = new StackPanel
+            {
+                Orientation = Orientation.Vertical,
+                VerticalAlignment = VerticalAlignment.Bottom
+            };
+            fpsStack.Children.Add(fpsText);
+            fpsStack.Children.Add(fpsDetailsText);
+            fpsOverlay.Child = fpsStack;
 
             var statusOverlay = new Grid
             {
@@ -825,6 +853,7 @@ public partial class MainWindow : Window
                 VideoImage = video,
                 FpsOverlayBorder = fpsOverlay,
                 FpsOverlayText = fpsText,
+                FpsOverlayDetailsText = fpsDetailsText,
                 SelectionBorder = cell,
                 StatusOverlay = statusOverlay,
                 StatusText = statusText,
@@ -1127,7 +1156,15 @@ public partial class MainWindow : Window
                 capabilities.PtzCapabilities = ptzCapabilities;
                 capabilities.AdaptivePtzProfile = CreateAdaptivePtzProfile(ptzCapabilities);
                 capabilities.LastKnownZoomNormalized = ptzCapabilities.CurrentZoomNormalized;
+                capabilities.PanTiltRuntimeGain = 1.0;
+                capabilities.ZoomRuntimeGain = 1.0;
+                capabilities.PanTiltConsecutiveFailures = 0;
+                capabilities.ZoomConsecutiveFailures = 0;
+                capabilities.LastMoveDirection = string.Empty;
+                capabilities.MiniCalibrationCompleted = false;
                 capabilities.IsPtzInfoLoaded = true;
+
+                capabilities.MiniCalibrationCompleted = true;
             }
             catch
             {
@@ -1137,6 +1174,7 @@ public partial class MainWindow : Window
             {
                 this._runtimeCapabilityLoadsInProgress.Remove(slot);
                 RefreshNavigationOverlayControlStates();
+                UpdateOverlayTextForSlot(slot);
             }
         }
         else
@@ -1144,8 +1182,15 @@ public partial class MainWindow : Window
             capabilities.PtzCapabilities = new OnvifPtzCapabilities();
             capabilities.AdaptivePtzProfile = CreateAdaptivePtzProfile(capabilities.PtzCapabilities);
             capabilities.LastKnownZoomNormalized = null;
+            capabilities.PanTiltRuntimeGain = 1.0;
+            capabilities.ZoomRuntimeGain = 1.0;
+            capabilities.PanTiltConsecutiveFailures = 0;
+            capabilities.ZoomConsecutiveFailures = 0;
+            capabilities.LastMoveDirection = string.Empty;
+            capabilities.MiniCalibrationCompleted = true;
             capabilities.IsPtzInfoLoaded = true;
             RefreshNavigationOverlayControlStates();
+            UpdateOverlayTextForSlot(slot);
         }
     }
 
@@ -2092,6 +2137,7 @@ public partial class MainWindow : Window
             {
                 viewport.FpsOverlayText.Text =
                     $"{sizeText}{LocalizationService.Translate(this._language, "Memory")} 000.0 MB  FPS: 00  0000 kbps";
+                ApplyPtzDiagnosticsOverlay(slot, viewport, null);
                 return;
             }
 
@@ -2100,7 +2146,72 @@ public partial class MainWindow : Window
                 + $" {counter.CurrentMemoryMb:000.0} MB"
                 + $"  FPS: {counter.CurrentFps:D2}"
                 + $"  {counter.CurrentBitrateKbps:0000} kbps";
+            ApplyPtzDiagnosticsOverlay(slot, viewport, counter);
         }, DispatcherPriority.Background);
+    }
+
+    private void ApplyPtzDiagnosticsOverlay(int slot, CameraViewport viewport, FpsCounterService? counter)
+    {
+        var hasRuntime = this._runtimeCapabilityCache.TryGetValue(slot, out var runtime);
+        var caps = hasRuntime ? runtime!.PtzCapabilities : new OnvifPtzCapabilities();
+        var stepLabel = LocalizationService.Translate(this._language, "StepLabel");
+        var defaultLabel = LocalizationService.Translate(this._language, "DefaultLabel");
+        var npt = ResolveAdaptiveStepSizes(slot, isFast: false).PanTiltStep;
+        var fpt = ResolveAdaptiveStepSizes(slot, isFast: true).PanTiltStep;
+        var nz = ResolveAdaptiveStepSizes(slot, isFast: false).ZoomStep;
+        var fz = ResolveAdaptiveStepSizes(slot, isFast: true).ZoomStep;
+        var znorm = hasRuntime ? ResolveCurrentZoomNormalized(runtime!) : null;
+
+        //var detailsText =
+        //    $"NPT/FPT {stepLabel}: {npt:0.#####}/{fpt:0.#####}  "
+        //    + $"NZ/FZ {stepLabel}: {nz:0.#####}/{fz:0.#####}  "
+        //    + $"Znorm: {(znorm.HasValue ? znorm.Value.ToString("0.###", CultureInfo.InvariantCulture) : "-")}  "
+        //    + $"{defaultLabel}: {BuildDefaultUsageText(caps)}";
+        var detailsText =
+            $"PT: {npt:0.#####}/{fpt:0.#####}  "
+            + $"Z: {nz:0.#####}/{fz:0.#####}  "
+            + $"Zn: {(znorm.HasValue ? znorm.Value.ToString("0.###", CultureInfo.InvariantCulture) : "-")}  "
+            + $"{defaultLabel}: {BuildDefaultUsageText(caps)}";
+
+        viewport.FpsOverlayDetailsText.Text = string.Empty;
+        viewport.FpsOverlayDetailsText.Inlines.Clear();
+        //viewport.FpsOverlayDetailsText.Inlines.Add(new Run("PTZ: "));
+        viewport.FpsOverlayDetailsText.Inlines.Add(BuildCapabilityRun('P', caps.HasPan));
+        viewport.FpsOverlayDetailsText.Inlines.Add(BuildCapabilityRun('T', caps.HasTilt));
+        viewport.FpsOverlayDetailsText.Inlines.Add(BuildCapabilityRun('Z', caps.HasZoom));
+        viewport.FpsOverlayDetailsText.Inlines.Add(new Run("  "));
+        viewport.FpsOverlayDetailsText.Inlines.Add(new Run(detailsText));
+
+        _ = counter;
+    }
+
+    private static Run BuildCapabilityRun(char key, bool isActive)
+    {
+        return new Run(key.ToString())
+        {
+            Foreground = isActive ? Brushes.White : new SolidColorBrush(Color.FromRgb(120, 120, 120))
+        };
+    }
+
+    private static string BuildDefaultUsageText(OnvifPtzCapabilities caps)
+    {
+        var tokens = new List<string>();
+        if (caps.PanStepUsesDefault)
+        {
+            tokens.Add("P");
+        }
+
+        if (caps.TiltStepUsesDefault)
+        {
+            tokens.Add("T");
+        }
+
+        if (caps.ZoomStepUsesDefault)
+        {
+            tokens.Add("Z");
+        }
+
+        return tokens.Count == 0 ? "-" : string.Join('/', tokens);
     }
 
     private void RestartWindowDebounce()
@@ -3321,7 +3432,7 @@ public partial class MainWindow : Window
         if (targetSlot <= 0 || !this._viewports.TryGetValue(targetSlot, out var viewport))
         {
             SetNavigationControlsEnabled(false, false, false);
-            this.NavigationVolumeSlider.IsEnabled = false;
+            SetNavigationVolumeControlVisualState(false);
             return;
         }
 
@@ -3334,7 +3445,14 @@ public partial class MainWindow : Window
         SetNavigationControlsEnabled(hasPanTilt, hasZoom, isPlaying);
 
         var hasAudio = runtime.HasAudio ?? false;
-        this.NavigationVolumeSlider.IsEnabled = isPlaying && hasAudio;
+        SetNavigationVolumeControlVisualState(isPlaying && hasAudio);
+    }
+
+    private void SetNavigationVolumeControlVisualState(bool isEnabled)
+    {
+        this.NavigationVolumeSlider.IsEnabled = isEnabled;
+        this.NavigationVolumeSlider.Opacity = isEnabled ? 1.0 : DisabledControlOpacity;
+        this.NavigationVolumeLabelText.Opacity = isEnabled ? 1.0 : DisabledControlOpacity;
     }
 
     private int ResolveNavigationOverlayTargetSlot()
@@ -3447,6 +3565,10 @@ public partial class MainWindow : Window
             ? direction[..^"Fast".Length]
             : direction;
         var (panStep, zoomStep) = ResolveAdaptiveStepSizes(targetSlot, isFastDirection);
+        var commandDirection = ResolveCommandDirection(normalizedDirection);
+        var (adjustedPanStep, adjustedZoomStep, settleDelayMs) = ResolveDirectionAdjustedSteps(targetSlot, commandDirection, panStep, zoomStep);
+        panStep = adjustedPanStep;
+        zoomStep = adjustedZoomStep;
         this._navigationStepSize = panStep;
         this._zoomStepSize = zoomStep;
 
@@ -3466,8 +3588,64 @@ public partial class MainWindow : Window
             return;
         }
 
-        StartNavigationMove(pan, tilt, zoom);
+        TrackMoveDirection(targetSlot, commandDirection);
+        StartNavigationMove(targetSlot, pan, tilt, zoom, settleDelayMs);
         e.Handled = true;
+    }
+
+    private static string ResolveCommandDirection(string normalizedDirection)
+    {
+        return normalizedDirection switch
+        {
+            "Left" => "PanNegative",
+            "Right" => "PanPositive",
+            "Up" => "TiltPositive",
+            "Down" => "TiltNegative",
+            "ZoomIn" => "ZoomPositive",
+            "ZoomOut" => "ZoomNegative",
+            _ => string.Empty
+        };
+    }
+
+    private (double PanStep, double ZoomStep, int SettleDelayMs) ResolveDirectionAdjustedSteps(int slot, string direction, double panStep, double zoomStep)
+    {
+        if (slot <= 0 || string.IsNullOrWhiteSpace(direction) || !this._runtimeCapabilityCache.TryGetValue(slot, out var runtime))
+        {
+            return (panStep, zoomStep, 0);
+        }
+
+        var previousDirection = runtime.LastMoveDirection;
+        if (string.IsNullOrWhiteSpace(previousDirection) || previousDirection == direction)
+        {
+            return (panStep, zoomStep, 0);
+        }
+
+        var isSameAxis = (previousDirection.StartsWith("Pan", StringComparison.Ordinal) && direction.StartsWith("Pan", StringComparison.Ordinal))
+                      || (previousDirection.StartsWith("Tilt", StringComparison.Ordinal) && direction.StartsWith("Tilt", StringComparison.Ordinal))
+                      || (previousDirection.StartsWith("Zoom", StringComparison.Ordinal) && direction.StartsWith("Zoom", StringComparison.Ordinal));
+
+        if (!isSameAxis)
+        {
+            return (panStep, zoomStep, 0);
+        }
+
+        if (direction.StartsWith("Zoom", StringComparison.Ordinal))
+        {
+            return (panStep, zoomStep * DirectionChangeBoostZoom, NavigationDirectionSettleDelayMs);
+        }
+
+        return (panStep * DirectionChangeBoostPanTilt, zoomStep, NavigationDirectionSettleDelayMs);
+    }
+
+    private void TrackMoveDirection(int slot, string direction)
+    {
+        if (slot <= 0 || string.IsNullOrWhiteSpace(direction) || !this._runtimeCapabilityCache.TryGetValue(slot, out var runtime))
+        {
+            return;
+        }
+
+        runtime.LastMoveDirection = direction;
+        runtime.LastMoveDirectionUtc = DateTime.UtcNow;
     }
 
     private (double PanTiltStep, double ZoomStep) ResolveAdaptiveStepSizes(int targetSlot, bool isFast)
@@ -3486,6 +3664,9 @@ public partial class MainWindow : Window
 
         var basePanStep = isFast ? profile.FastPanTiltMinStep : profile.NormalPanTiltMinStep;
         var baseZoomStep = isFast ? profile.FastZoomMinStep : profile.NormalZoomMinStep;
+
+        basePanStep *= Math.Clamp(runtime.PanTiltRuntimeGain, 0.5, 8.0);
+        baseZoomStep *= Math.Clamp(runtime.ZoomRuntimeGain, 0.5, 8.0);
 
         var panStep = Math.Clamp(basePanStep * adaptiveScale, FixedNavigationStepSize / 10d, 1.0d);
         var zoomStep = Math.Clamp(baseZoomStep * adaptiveScale, FixedZoomStepSize / 10d, 1.0d);
@@ -3512,7 +3693,7 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
-    private void StartNavigationMove(double panDelta, double tiltDelta, double zoomDelta)
+    private void StartNavigationMove(int activeSlot, double panDelta, double tiltDelta, double zoomDelta, int settleDelayMs)
     {
         StopNavigationMove();
 
@@ -3521,9 +3702,21 @@ public partial class MainWindow : Window
 
         _ = Task.Run(async () =>
         {
-            var activeSlot = this._slot;
+            if (settleDelayMs > 0)
+            {
+                try
+                {
+                    await this._onvifService.StopMoveAsync(this._settings, stopPanTilt: true, stopZoom: true, cancellationToken);
+                    await Task.Delay(settleDelayMs, cancellationToken);
+                }
+                catch
+                {
+                }
+            }
+
             while (!cancellationToken.IsCancellationRequested)
             {
+                var loopStart = DateTime.UtcNow;
                 try
                 {
                     if (zoomDelta != 0)
@@ -3544,9 +3737,18 @@ public partial class MainWindow : Window
                         await this._onvifService.MoveRelativeAsync(this._settings, panDelta, tiltDelta, cancellationToken);
                     }
 
-                    if (NavigationRepeatDelaySec > 0)
+                    if (this._runtimeCapabilityCache.TryGetValue(activeSlot, out var successRuntime))
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(NavigationRepeatDelaySec), cancellationToken);
+                        if (zoomDelta != 0)
+                        {
+                            successRuntime.ZoomConsecutiveFailures = 0;
+                            successRuntime.ZoomRuntimeGain = Math.Max(1.0, successRuntime.ZoomRuntimeGain * 0.98);
+                        }
+                        else
+                        {
+                            successRuntime.PanTiltConsecutiveFailures = 0;
+                            successRuntime.PanTiltRuntimeGain = Math.Max(1.0, successRuntime.PanTiltRuntimeGain * 0.98);
+                        }
                     }
                 }
                 catch (OperationCanceledException)
@@ -3555,7 +3757,37 @@ public partial class MainWindow : Window
                 }
                 catch
                 {
+                    if (this._runtimeCapabilityCache.TryGetValue(activeSlot, out var runtime))
+                    {
+                        if (zoomDelta != 0)
+                        {
+                            runtime.ZoomConsecutiveFailures++;
+                            runtime.ZoomRuntimeGain = Math.Clamp(runtime.ZoomRuntimeGain * (runtime.ZoomConsecutiveFailures >= 2 ? 1.35 : 1.15), 1.0, 8.0);
+                        }
+                        else
+                        {
+                            runtime.PanTiltConsecutiveFailures++;
+                            runtime.PanTiltRuntimeGain = Math.Clamp(runtime.PanTiltRuntimeGain * (runtime.PanTiltConsecutiveFailures >= 2 ? 1.35 : 1.15), 1.0, 8.0);
+                        }
+
+                        UpdateOverlayTextForSlot(activeSlot);
+                    }
+
+                    break;
+                }
+
+                var elapsed = DateTime.UtcNow - loopStart;
+                var delay = TimeSpan.FromMilliseconds(NavigationRepeatIntervalMs) - elapsed;
+                if (delay > TimeSpan.Zero)
+                {
+                    try
+                    {
+                        await Task.Delay(delay, cancellationToken);
+                    }
+                    catch
+                    {
                         break;
+                    }
                 }
             }
         }, cancellationToken);

@@ -17,6 +17,9 @@ public sealed class OnvifPtzCapabilities
     public double? PanMinStep { get; init; }
     public double? TiltMinStep { get; init; }
     public double? ZoomMinStep { get; init; }
+    public bool PanStepUsesDefault { get; init; }
+    public bool TiltStepUsesDefault { get; init; }
+    public bool ZoomStepUsesDefault { get; init; }
 
     public double? CurrentZoom { get; init; }
     public double? CurrentZoomNormalized { get; init; }
