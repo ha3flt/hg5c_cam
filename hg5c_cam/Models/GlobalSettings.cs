@@ -3,6 +3,7 @@ namespace hg5c_cam.Models;
 public class GlobalSettings
 {
     public bool EnableSound { get; set; } = true;
+    public bool ForceSoftwareDecoding { get; set; }
     public string AudioOutputDeviceName { get; set; } = string.Empty;
     public int SoundLevel { get; set; } = 100;
     public int SplitPlaybackCameraCount { get; set; } = 1;

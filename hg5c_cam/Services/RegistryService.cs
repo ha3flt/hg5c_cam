@@ -74,6 +74,7 @@ public class RegistryService
         }
 
         settings.EnableSound = ToInt(key.GetValue("GlobalSoundEnabled"), settings.EnableSound ? 1 : 0) == 1;
+        settings.ForceSoftwareDecoding = ToInt(key.GetValue("ForceSoftwareDecoding"), settings.ForceSoftwareDecoding ? 1 : 0) == 1;
         settings.AudioOutputDeviceName = (key.GetValue("AudioOutputDeviceName") as string) ?? settings.AudioOutputDeviceName;
         settings.SoundLevel = Math.Clamp(ToInt(key.GetValue("GlobalSoundLevel"), settings.SoundLevel), 0, 100);
         settings.SplitPlaybackCameraCount = Math.Clamp(ToInt(key.GetValue("SplitPlaybackCameraCount"), settings.SplitPlaybackCameraCount), 1, MaxInstanceSlots);
@@ -93,6 +94,7 @@ public class RegistryService
         }
 
         key.SetValue("GlobalSoundEnabled", settings.EnableSound ? 1 : 0, RegistryValueKind.DWord);
+        key.SetValue("ForceSoftwareDecoding", settings.ForceSoftwareDecoding ? 1 : 0, RegistryValueKind.DWord);
         key.SetValue("AudioOutputDeviceName", settings.AudioOutputDeviceName ?? string.Empty, RegistryValueKind.String);
         key.SetValue("GlobalSoundLevel", Math.Clamp(settings.SoundLevel, 0, 100), RegistryValueKind.DWord);
         key.SetValue("SplitPlaybackCameraCount", Math.Clamp(settings.SplitPlaybackCameraCount, 1, MaxInstanceSlots), RegistryValueKind.DWord);

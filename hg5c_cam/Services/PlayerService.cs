@@ -13,6 +13,11 @@ namespace hg5c_cam.Services;
 public class PlayerService
 {
     private const int DefaultRtspIoTimeoutMicroseconds = 5_000_000;
+    private static readonly AVHWDeviceType[] PreferredHardwareDevices =
+    [
+        AVHWDeviceType.AV_HWDEVICE_TYPE_D3D11VA,
+        AVHWDeviceType.AV_HWDEVICE_TYPE_DXVA2
+    ];
 
     private Image? _videoImage;
     private WriteableBitmap? _writeableBitmap;
@@ -40,13 +45,13 @@ public class PlayerService
         this._videoImage = videoImage;
     }
 
-    public void Play(string rtspUrl, int maxFps, int reconnectDelaySec, int retries, int networkTimeoutSec, bool soundEnabled, string audioOutputDeviceName, int soundLevel)
+    public void Play(string rtspUrl, int maxFps, int reconnectDelaySec, int retries, int networkTimeoutSec, bool soundEnabled, string audioOutputDeviceName, int soundLevel, bool forceSoftwareDecoding)
     {
         Stop();
         StreamAudioAvailabilityChanged?.Invoke(false);
         var generation = Interlocked.Increment(ref this._playbackGeneration);
         this._cts = new CancellationTokenSource();
-        _ = RunLoopAsync(rtspUrl, maxFps, reconnectDelaySec, retries, networkTimeoutSec, soundEnabled, audioOutputDeviceName, soundLevel, generation, this._cts.Token).ContinueWith(_ =>
+        _ = RunLoopAsync(rtspUrl, maxFps, reconnectDelaySec, retries, networkTimeoutSec, soundEnabled, audioOutputDeviceName, soundLevel, forceSoftwareDecoding, generation, this._cts.Token).ContinueWith(_ =>
         {
             SetState(PlayerState.Disconnected, generation);
         }, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
@@ -90,7 +95,7 @@ public class PlayerService
         }
     }
 
-    private async Task RunLoopAsync(string rtspUrl, int maxFps, int reconnectDelaySec, int retries, int networkTimeoutSec, bool soundEnabled, string audioOutputDeviceName, int soundLevel, int generation, CancellationToken token)
+    private async Task RunLoopAsync(string rtspUrl, int maxFps, int reconnectDelaySec, int retries, int networkTimeoutSec, bool soundEnabled, string audioOutputDeviceName, int soundLevel, bool forceSoftwareDecoding, int generation, CancellationToken token)
     {
         try
         {
@@ -114,7 +119,7 @@ public class PlayerService
 
                 try
                 {
-                    await Task.Run(() => DecodeRtspLoop(rtspUrl, maxFps, networkTimeoutSec, soundEnabled, audioOutputDeviceName, soundLevel, generation, token), token).ConfigureAwait(false);
+                    await Task.Run(() => DecodeRtspLoop(rtspUrl, maxFps, networkTimeoutSec, soundEnabled, audioOutputDeviceName, soundLevel, forceSoftwareDecoding, generation, token), token).ConfigureAwait(false);
                     attempt = 0;
                 }
                 catch (OperationCanceledException)
@@ -142,7 +147,7 @@ public class PlayerService
         }
     }
 
-    private unsafe void DecodeRtspLoop(string rtspUrl, int maxFps, int networkTimeoutSec, bool soundEnabled, string audioOutputDeviceName, int soundLevel, int generation, CancellationToken token)
+    private unsafe void DecodeRtspLoop(string rtspUrl, int maxFps, int networkTimeoutSec, bool soundEnabled, string audioOutputDeviceName, int soundLevel, bool forceSoftwareDecoding, int generation, CancellationToken token)
     {
         AVFormatContext* formatContext = null;
         AVCodecContext* videoCodecContext = null;
@@ -152,11 +157,14 @@ public class PlayerService
         AVPacket* packet = null;
         SwsContext* swsContext = null;
         SwrContext* swrContext = null;
+        AVBufferRef* hardwareDeviceContext = null;
+        AVFrame* softwareVideoFrame = null;
         AVDictionary* formatOptions = null;
         var videoStreamIndex = -1;
         var audioStreamIndex = -1;
         var outputAudioChannels = 2;
         var outputAudioSampleRate = 48000;
+        var hardwarePixelFormat = AVPixelFormat.AV_PIX_FMT_NONE;
 
         try
         {
@@ -188,6 +196,12 @@ public class PlayerService
             }
 
             ThrowIfError(ffmpeg.avcodec_parameters_to_context(videoCodecContext, videoStream->codecpar), T("ExceptionPlayerCopyCodecParametersFailed"));
+
+            if (!forceSoftwareDecoding)
+            {
+                TryInitializeHardwareDecode(videoCodec, videoCodecContext, out hardwareDeviceContext, out hardwarePixelFormat);
+            }
+
             ThrowIfError(ffmpeg.avcodec_open2(videoCodecContext, videoCodec, null), T("ExceptionPlayerOpenCodecFailed"));
 
             audioStreamIndex = ffmpeg.av_find_best_stream(formatContext, AVMediaType.AVMEDIA_TYPE_AUDIO, -1, -1, null, 0);
@@ -276,10 +290,14 @@ public class PlayerService
                 StreamAspectRatioChanged?.Invoke(aspectRatio);
             }
 
+            var conversionPixelFormat = hardwarePixelFormat != AVPixelFormat.AV_PIX_FMT_NONE && videoCodecContext->sw_pix_fmt != AVPixelFormat.AV_PIX_FMT_NONE
+                ? videoCodecContext->sw_pix_fmt
+                : videoCodecContext->pix_fmt;
+
             swsContext = ffmpeg.sws_getContext(
                 width,
                 height,
-                videoCodecContext->pix_fmt,
+                conversionPixelFormat,
                 width,
                 height,
                 AVPixelFormat.AV_PIX_FMT_BGRA,
@@ -294,9 +312,10 @@ public class PlayerService
             }
 
             decodedVideoFrame = ffmpeg.av_frame_alloc();
+            softwareVideoFrame = ffmpeg.av_frame_alloc();
             decodedAudioFrame = ffmpeg.av_frame_alloc();
             packet = ffmpeg.av_packet_alloc();
-            if (decodedVideoFrame is null || decodedAudioFrame is null || packet is null)
+            if (decodedVideoFrame is null || softwareVideoFrame is null || decodedAudioFrame is null || packet is null)
             {
                 throw new InvalidOperationException(T("ExceptionPlayerAllocateFramePacketFailed"));
             }
@@ -352,7 +371,13 @@ public class PlayerService
                             nextFrameDeadline = now + frameIntervalTicks;
                         }
 
-                        RenderFrame(decodedVideoFrame, swsContext, width, height, generation);
+                        var frameToRender = ResolveFrameForRender(decodedVideoFrame, softwareVideoFrame, hardwarePixelFormat);
+                        if (frameToRender is null)
+                        {
+                            continue;
+                        }
+
+                        RenderFrame(frameToRender, swsContext, width, height, generation);
                         Interlocked.Increment(ref this._frameCounter);
                     }
                 }
@@ -403,6 +428,11 @@ public class PlayerService
                 ffmpeg.av_frame_free(&decodedAudioFrame);
             }
 
+            if (softwareVideoFrame is not null)
+            {
+                ffmpeg.av_frame_free(&softwareVideoFrame);
+            }
+
             if (swsContext is not null)
             {
                 ffmpeg.sws_freeContext(swsContext);
@@ -418,6 +448,11 @@ public class PlayerService
                 ffmpeg.avcodec_free_context(&videoCodecContext);
             }
 
+            if (hardwareDeviceContext is not null)
+            {
+                ffmpeg.av_buffer_unref(&hardwareDeviceContext);
+            }
+
             if (audioCodecContext is not null)
             {
                 ffmpeg.avcodec_free_context(&audioCodecContext);
@@ -430,6 +465,71 @@ public class PlayerService
 
             DisposeAudioOutput();
         }
+    }
+
+    private static unsafe void TryInitializeHardwareDecode(AVCodec* videoCodec, AVCodecContext* codecContext, out AVBufferRef* deviceContext, out AVPixelFormat hardwarePixelFormat)
+    {
+        deviceContext = null;
+        hardwarePixelFormat = AVPixelFormat.AV_PIX_FMT_NONE;
+
+        foreach (var deviceType in PreferredHardwareDevices)
+        {
+            var candidatePixelFormat = FindHardwarePixelFormat(videoCodec, deviceType);
+            if (candidatePixelFormat == AVPixelFormat.AV_PIX_FMT_NONE)
+            {
+                continue;
+            }
+
+            AVBufferRef* candidateDeviceContext = null;
+            var createResult = ffmpeg.av_hwdevice_ctx_create(&candidateDeviceContext, deviceType, null, null, 0);
+            if (createResult < 0 || candidateDeviceContext is null)
+            {
+                continue;
+            }
+
+            codecContext->hw_device_ctx = ffmpeg.av_buffer_ref(candidateDeviceContext);
+            ffmpeg.av_buffer_unref(&candidateDeviceContext);
+            if (codecContext->hw_device_ctx is null)
+            {
+                continue;
+            }
+
+            deviceContext = codecContext->hw_device_ctx;
+            hardwarePixelFormat = candidatePixelFormat;
+            return;
+        }
+    }
+
+    private static unsafe AVPixelFormat FindHardwarePixelFormat(AVCodec* codec, AVHWDeviceType deviceType)
+    {
+        for (var i = 0; ; i++)
+        {
+            var config = ffmpeg.avcodec_get_hw_config(codec, i);
+            if (config is null)
+            {
+                break;
+            }
+
+            if ((config->methods & 0x01) != 0 &&
+                config->device_type == deviceType)
+            {
+                return config->pix_fmt;
+            }
+        }
+
+        return AVPixelFormat.AV_PIX_FMT_NONE;
+    }
+
+    private static unsafe AVFrame* ResolveFrameForRender(AVFrame* decodedFrame, AVFrame* softwareFrame, AVPixelFormat hardwarePixelFormat)
+    {
+        if (hardwarePixelFormat == AVPixelFormat.AV_PIX_FMT_NONE || decodedFrame->format != (int)hardwarePixelFormat)
+        {
+            return decodedFrame;
+        }
+
+        ffmpeg.av_frame_unref(softwareFrame);
+        var transferResult = ffmpeg.av_hwframe_transfer_data(softwareFrame, decodedFrame, 0);
+        return transferResult < 0 ? null : softwareFrame;
     }
 
     private static unsafe void ConfigureRtspOptions(AVDictionary** options, int networkTimeoutSec)

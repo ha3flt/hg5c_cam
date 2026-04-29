@@ -27,6 +27,7 @@ public partial class GlobalSettingsDialog : Window
         this.SplitPlaybackCameraCountTextBox.Text = Math.Clamp(settings.SplitPlaybackCameraCount, 1, RegistryService.MaxInstanceSlots).ToString();
         this.AlwaysMaximizedPlaybackCheckBox.IsChecked = settings.AlwaysMaximizedPlayback;
         this.TopmostMainWindowCheckBox.IsChecked = settings.TopmostMainWindow;
+        this.ForceSoftwareDecodingCheckBox.IsChecked = settings.ForceSoftwareDecoding;
 
         this.RefreshButton.Click += (_, _) => LoadAudioDevices();
         this.OkButton.Click += (_, _) => SaveAndClose();
@@ -50,6 +51,7 @@ public partial class GlobalSettingsDialog : Window
         this.SplitPlaybackCameraCountLabel.Text = LocalizationService.Translate(this._language, "SplitPlaybackCameraCount");
         this.AlwaysMaximizedPlaybackCheckBox.Content = LocalizationService.Translate(this._language, "AlwaysMaximizedPlayback");
         this.TopmostMainWindowCheckBox.Content = LocalizationService.Translate(this._language, "TopmostMainWindow");
+        this.ForceSoftwareDecodingCheckBox.Content = LocalizationService.Translate(this._language, "ForceSoftwareDecoding");
         this.OkButton.Content = LocalizationService.Translate(this._language, "Ok");
         this.CancelButton.Content = LocalizationService.Translate(this._language, "Cancel");
     }
@@ -89,6 +91,7 @@ public partial class GlobalSettingsDialog : Window
             SplitPlaybackCameraCount = ParseSplitPlaybackCameraCount(),
             AlwaysMaximizedPlayback = this.AlwaysMaximizedPlaybackCheckBox.IsChecked == true,
             TopmostMainWindow = this.TopmostMainWindowCheckBox.IsChecked == true,
+            ForceSoftwareDecoding = this.ForceSoftwareDecodingCheckBox.IsChecked == true,
             LastUsedCameraSlot = this._original.LastUsedCameraSlot,
             UseSecondStream = this._original.UseSecondStream == 1 ? 1 : 0
         };
@@ -108,6 +111,7 @@ public partial class GlobalSettingsDialog : Window
             SplitPlaybackCameraCount = Math.Clamp(settings.SplitPlaybackCameraCount, 1, RegistryService.MaxInstanceSlots),
             AlwaysMaximizedPlayback = settings.AlwaysMaximizedPlayback,
             TopmostMainWindow = settings.TopmostMainWindow,
+            ForceSoftwareDecoding = settings.ForceSoftwareDecoding,
             LastUsedCameraSlot = settings.LastUsedCameraSlot,
             UseSecondStream = settings.UseSecondStream == 1 ? 1 : 0
         };

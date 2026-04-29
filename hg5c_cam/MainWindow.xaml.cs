@@ -1644,7 +1644,8 @@ public partial class MainWindow : Window
                 this._settings.NetworkTimeoutSec,
                 this._settings.SoundEnabled && this._globalSettings.EnableSound,
                 this._globalSettings.AudioOutputDeviceName,
-                this._settings.SoundLevel);
+                this._settings.SoundLevel,
+                this._globalSettings.ForceSoftwareDecoding);
             this._navigationStepSize = FixedNavigationStepSize;
             this._zoomStepSize = FixedZoomStepSize;
             StartFpsCounterForSlot(this._slot, this._playerService);
@@ -1731,7 +1732,8 @@ public partial class MainWindow : Window
                 viewport.Settings.NetworkTimeoutSec,
                 viewport.Settings.SoundEnabled && this._globalSettings.EnableSound,
                 this._globalSettings.AudioOutputDeviceName,
-                viewport.Settings.SoundLevel);
+                viewport.Settings.SoundLevel,
+                this._globalSettings.ForceSoftwareDecoding);
             this._navigationStepSize = FixedNavigationStepSize;
             this._zoomStepSize = FixedZoomStepSize;
             this._backgroundPlayers[viewport.Slot] = player;
