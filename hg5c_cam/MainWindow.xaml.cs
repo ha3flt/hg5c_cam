@@ -2137,19 +2137,30 @@ public partial class MainWindow : Window
 
             if (!this._fpsCounters.TryGetValue(slot, out var counter))
             {
+                var decodeModeToken = ResolveDecodeModeToken(slot);
                 viewport.FpsOverlayText.Text =
-                    $"{sizeText}{LocalizationService.Translate(this._language, "Memory")} 000.0 MB  FPS: 00  0000 kbps";
+                    $"{decodeModeToken}  {sizeText}{LocalizationService.Translate(this._language, "Memory")} 000.0 MB  FPS: 00  0000 kbps";
                 ApplyPtzDiagnosticsOverlay(slot, viewport, null);
                 return;
             }
 
+            var decodeMode = ResolveDecodeModeToken(slot);
             viewport.FpsOverlayText.Text =
-                $"{sizeText}{LocalizationService.Translate(this._language, "Memory")}"
+                $"{decodeMode}  {sizeText}{LocalizationService.Translate(this._language, "Memory")}"
                 + $" {counter.CurrentMemoryMb:000.0} MB"
                 + $"  FPS: {counter.CurrentFps:D2}"
                 + $"  {counter.CurrentBitrateKbps:0000} kbps";
             ApplyPtzDiagnosticsOverlay(slot, viewport, counter);
         }, DispatcherPriority.Background);
+    }
+
+    private string ResolveDecodeModeToken(int slot)
+    {
+        var isHardware = slot == this._slot
+            ? this._playerService.IsHardwareDecodingActive()
+            : (this._backgroundPlayers.TryGetValue(slot, out var backgroundPlayer) && backgroundPlayer.IsHardwareDecodingActive());
+
+        return isHardware ? "HW" : "SW";
     }
 
     private void ApplyPtzDiagnosticsOverlay(int slot, CameraViewport viewport, FpsCounterService? counter)
