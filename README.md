@@ -24,17 +24,18 @@ We used ODM (ONVIF Device Manager) for a while, but it had its limitations. For 
 
 - ONVIF-based RTSP URL resolution
 - RTSP stream playback with sound
+- Hardware decoding by video card with fallback to software decoding
+- Simultaneous display of multiple camera streams
 - PTZ presets overlay/menu support
 - Adaptive PTZ, two-speed rotating and zooming by buttons
-- Simultaneous display of multiple camera streams
+- FPS, memory, network load, and other status information overlay
 - Per-camera window position, size, and parameters persistence
+- Topmost window mode
 - Manual aspect ratio correction if neeed
 - Settings export/import to/from .yaml (text) files
 - Automated installation is possible with a pre-supplied encrypted (7z) camera configuration file
 - Encrypted password storage in Registry
 - Hungarian/English localization
-- FPS, memory, network load, and other status information overlay
-- Topmost window mode
 
 ## Command-line usage
 
